@@ -4,13 +4,13 @@ import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Chá de Casa Nova - João e Maria",
-  description: "Ajude João e Maria a construir o lar dos sonhos!",
+  title: "Chá de Casa Nova - Gustavo e Mirela",
+  description: "Ajude Gustavo e Mirela a construir o lar dos sonhos!",
 };
 
 export default function RootLayout({
