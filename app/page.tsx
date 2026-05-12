@@ -26,13 +26,13 @@ export default function Home() {
         <div className="flex justify-center items-center gap-8 md:gap-16 mb-16">
           <div className="relative">
             <div className="w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-yellow-400 shadow-lg shadow-yellow-400/20 bg-gray-800 flex items-center justify-center">
-              <Image src="/mesmo.png" alt="Gustavo" width={192} height={192} />
+              <Image src="/mesmo.png" alt="Gustavo" width={800} height={800} />
             </div>
             <p className="text-center mt-3 text-yellow-400 font-semibold">Gustavo</p>
           </div>
           <div className="relative">
             <div className="w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-yellow-400 shadow-lg shadow-yellow-400/20 bg-gray-800 flex items-center justify-center">
-              <Image src="/ela.png" alt="Mirela" width={192} height={192} />
+              <Image src="/mesma.png" alt="Mirela" width={800} height={800} />
             </div>
             <p className="text-center mt-3 text-yellow-400 font-semibold">Mirela</p>
           </div>
@@ -165,7 +165,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="relative group overflow-hidden rounded-lg border-2 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 bg-gray-800 h-64 flex items-center justify-center">
             <Image
-              src="/foto2.png"
+              src="/foto8.png"
               alt="Nós"
               width={400}
               height={400}
@@ -174,8 +174,8 @@ export default function Home() {
           </div>
           <div className="relative group overflow-hidden rounded-lg border-2 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 bg-gray-800 h-64 flex items-center justify-center">
             <Image
-              src="/foto1.png"
-              alt="Praia"
+              src="/foto3.png"
+              alt="natal"
               width={400}
               height={400}
               suppressHydrationWarning
@@ -183,7 +183,7 @@ export default function Home() {
           </div>
           <div className="relative group overflow-hidden rounded-lg border-2 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 bg-gray-800 h-64 flex items-center justify-center">
             <Image
-              src="/foto3.png"
+              src="/foto5.png"
               alt="Pedido de namoro"
               width={400}
               height={400}
