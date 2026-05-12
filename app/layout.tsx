@@ -9,7 +9,7 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Chá de Casa Nova - Gustavo e Mirela",
+  title: "Chá de Casa Nova - Gustavo & Mirela",
   description: "Ajude Gustavo e Mirela a construir o lar dos sonhos!",
 };
 
