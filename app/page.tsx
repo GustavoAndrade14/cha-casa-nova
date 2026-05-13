@@ -374,8 +374,8 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 { src: "/foto8.png", alt: "Nós" },
-                { src: "/foto3.png", alt: "Natal" },
-                { src: "/foto5.png", alt: "Pedido de namoro" },
+                { src: "/foto3.png", alt: "Pedido de namoro" },
+                { src: "/foto5.png", alt: "Natal" },
               ].map(({ src, alt }) => (
                 <div key={src} className="photo-card relative rounded-2xl border-2 border-yellow-400/25 bg-gray-900 h-72 overflow-hidden">
                   <Image src={src} alt={alt} fill className="object-cover" />
