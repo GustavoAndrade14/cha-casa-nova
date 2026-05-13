@@ -130,7 +130,7 @@ export default function Home() {
                   Clique no botão Comprar para ser redirecionado à loja onde o item está disponível para compra. Após comprar o item, não esqueça de marcar como comprado para que possamos atualizar nossa lista e evitar compras duplicadas.
                 </p>
               </div>
-               <div className="text-center">
+              <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-yellow-400 text-black font-bold text-xl flex items-center justify-center mx-auto mb-4">
                   3
                 </div>
@@ -138,7 +138,7 @@ export default function Home() {
                   Caso não queira comprar o item, mas queira ajudar dando o valor de algum item, clique no botão Pix para fazer uma doação via Pix. O valor arrecadado será utilizado
                   para comprar os itens da lista.
                 </p>
-              </div> 
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -262,27 +262,25 @@ function GiftCard({
           </div>
           <h3 className="text-lg font-semibold text-yellow-400 mb-2 line-clamp-2">{name}</h3>
           <p className="text-gray-300 font-bold mb-4">{price}</p>
-          
-          <div className="flex flex-col sm:flex-row gap-2">
+
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
               onClick={handleBuyClick}
-              className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 transition-colors gap-2 cursor-pointer"
+              className="flex-1 h-14 sm:h-20 bg-yellow-400 text-black hover:bg-yellow-500 transition-all duration-300 gap-2 cursor-pointer text-base sm:text-sm font-semibold rounded-xl shadow-lg shadow-yellow-500/20 active:scale-[0.98] py-4 sm:py-0"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-5 h-5 sm:w-4 sm:h-4" />
               Comprar
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-4 h-4 sm:w-3 sm:h-3" />
             </Button>
+
             <Button
               onClick={handlePixClick}
-              className="flex-1 bg-green-600 text-white hover:bg-green-700 transition-colors gap-2 cursor-pointer"
+              className="flex-1 h-14 sm:h-20 bg-green-600 text-white hover:bg-green-700 transition-all duration-300 gap-2 cursor-pointer text-base sm:text-sm font-semibold rounded-xl shadow-lg shadow-green-500/20 active:scale-[0.98] py-4 sm:py-0"
             >
-              <QrCode className="w-4 h-4" />
+              <QrCode className="w-5 h-5 sm:w-4 sm:h-4" />
               Pix
             </Button>
           </div>
-          <p className="text-xs text-gray-500 text-center mt-2">
-            Contribua com o valor via Pix
-          </p>
         </CardContent>
       </Card>
 
@@ -299,23 +297,58 @@ function GiftCard({
                   <div className="text-gray-400 text-sm mb-1">Item:</div>
                   <div className="text-white font-semibold">{name}</div>
                 </div>
-                
+
                 <div className="bg-black/50 p-3 rounded-lg">
                   <div className="text-gray-400 text-sm mb-1">Valor sugerido:</div>
                   <div className="text-yellow-400 text-2xl font-bold">{price}</div>
                 </div>
-                
-                <div className="bg-black/50 p-3 rounded-lg">
-                  <div className="text-gray-400 text-sm mb-1">Chave PIX:</div>
-                  <code className="block bg-black p-2 rounded text-yellow-400 text-sm break-all font-mono">
-                    {pixKey}
-                  </code>
+
+                <div className="bg-black/40 border border-white/10 p-4 rounded-2xl backdrop-blur-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400 font-medium">
+                      Chave PIX
+                    </span>
+                  </div>
+
+                  <Button
+                    onClick={copyPixKey}
+                    variant="outline"
+                    className={`
+      w-full justify-between items-center
+      bg-black/60 hover:bg-black/80
+      border-white/10 hover:border-yellow-400/40
+      text-white rounded-xl h-auto p-3
+      transition-all duration-300 cursor-pointer
+    `}
+                  >
+                    <code className="flex-1 text-left text-yellow-400 text-sm break-all font-mono pr-3">
+                      {pixKey}
+                    </code>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 text-green-400" />
+                          <span className="text-green-400 text-sm">
+                            Copiado
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 text-gray-300" />
+                          <span className="text-sm text-gray-300">
+                            Copiar
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </Button>
                 </div>
 
                 <div className="bg-yellow-400/10 border border-yellow-400/30 p-3 rounded-lg">
                   <div className="text-yellow-400 text-sm font-semibold mb-1">📋 Como doar:</div>
                   <ol className="text-gray-300 text-xs space-y-1 list-decimal list-inside">
-                    <li>Copie a chave PIX abaixo</li>
+                    <li>Copie a chave PIX acima</li>
                     <li>Abra o app do seu banco</li>
                     <li>Escolha a opção Pagar com Pix</li>
                     <li>Cole a chave PIX e o valor sugerido</li>
@@ -326,28 +359,12 @@ function GiftCard({
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
-            <Button
-              onClick={copyPixKey}
-              className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 gap-2"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Chave PIX copiada!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Copiar chave PIX
-                </>
-              )}
-            </Button>
             <AlertDialogCancel className="bg-transparent border-gray-600 text-white hover:bg-gray-800 hover:text-white">
               Fechar
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
     </>
   );
 }
