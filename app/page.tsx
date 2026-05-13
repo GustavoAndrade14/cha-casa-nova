@@ -1,14 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { Gift, MapPin, Calendar, Heart, ShoppingBag, ExternalLink } from "lucide-react";
+import { Gift, MapPin, Calendar, Heart, ShoppingBag, ExternalLink, QrCode, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useState } from "react";
 
 export default function Home() {
-  const [filter, setFilter] = useState("todos");
-
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header Section */}
@@ -106,13 +113,13 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-yellow-400 mb-6 text-center">
               Como Usar o Site
             </h2>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-yellow-400 text-black font-bold text-xl flex items-center justify-center mx-auto mb-4">
                   1
                 </div>
                 <p className="text-gray-300">
-                  Navegue pelos nossos itens desejados na lista abaixo
+                  Navegue pelos nossos itens desejados na lista abaixo onde estão os itens que selecionamos para nosso lar. Cada item tem um link de compra para facilitar a aquisição.
                 </p>
               </div>
               <div className="text-center">
@@ -120,28 +127,27 @@ export default function Home() {
                   2
                 </div>
                 <p className="text-gray-300">
-                  Clique no botão Comprar para ser redirecionado à loja
+                  Clique no botão Comprar para ser redirecionado à loja onde o item está disponível para compra. Após comprar o item, não esqueça de marcar como comprado para que possamos atualizar nossa lista e evitar compras duplicadas.
                 </p>
               </div>
-              {/* <div className="text-center">
+               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-yellow-400 text-black font-bold text-xl flex items-center justify-center mx-auto mb-4">
                   3
                 </div>
                 <p className="text-gray-300">
-                  Escolha o presente e nos presenteie com sua contribuição
+                  Caso não queira comprar o item, mas queira ajudar dando o valor de algum item, clique no botão Pix para fazer uma doação via Pix. O valor arrecadado será utilizado
+                  para comprar os itens da lista.
                 </p>
-              </div> */}
+              </div> 
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Gift List Section */}
       <div className="container mx-auto px-4 py-12">
         <h2 className="text-3xl font-bold text-yellow-400 mb-8 text-center">
           Nossos Itens Desejados
         </h2>
-        {/* Grid de itens */}
         <div className="grid md:grid-cols-3 gap-6">
           {giftItems
             .map((item, index) => (
@@ -149,7 +155,6 @@ export default function Home() {
             ))}
         </div>
 
-        {/* Mensagem se não houver itens */}
         {giftItems.length === 0 && (
           <div className="text-center text-gray-400 py-12">
             Nenhum item encontrado nesta categoria.
@@ -208,89 +213,180 @@ function GiftCard({
   price,
   image,
   link,
+  pixKey,
 }: {
   name: string;
   price: string;
   image: string;
   link: string;
+  pixKey: string;
 }) {
   const [imageError, setImageError] = useState(false);
-
+  const [showPixDialog, setShowPixDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleBuyClick = () => {
     window.open(link, '_blank', 'noopener,noreferrer');
   };
 
+  const handlePixClick = () => {
+    setShowPixDialog(true);
+  };
+
+  const copyPixKey = () => {
+    navigator.clipboard.writeText(pixKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <Card className="bg-black/50 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-yellow-400/20">
-      <CardContent className="p-4">
-        <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
-          {!imageError ? (
-            <Image
-              src={image}
-              alt={name}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-contain p-4"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-yellow-400">
-              <Gift className="w-12 h-12 mb-2" />
-              <span className="text-sm text-center px-4">Imagem não disponível</span>
+    <>
+      <Card className="bg-black/50 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-yellow-400/20">
+        <CardContent className="p-4">
+          <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
+            {!imageError ? (
+              <Image
+                src={image}
+                alt={name}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-contain p-4"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center text-yellow-400">
+                <Gift className="w-12 h-12 mb-2" />
+                <span className="text-sm text-center px-4">Imagem não disponível</span>
+              </div>
+            )}
+          </div>
+          <h3 className="text-lg font-semibold text-yellow-400 mb-2 line-clamp-2">{name}</h3>
+          <p className="text-gray-300 font-bold mb-4">{price}</p>
+          
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={handleBuyClick}
+              className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 transition-colors gap-2 cursor-pointer"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Comprar
+              <ExternalLink className="w-3 h-3" />
+            </Button>
+            <Button
+              onClick={handlePixClick}
+              className="flex-1 bg-green-600 text-white hover:bg-green-700 transition-colors gap-2 cursor-pointer"
+            >
+              <QrCode className="w-4 h-4" />
+              Pix
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Contribua com o valor via Pix
+          </p>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={showPixDialog} onOpenChange={setShowPixDialog}>
+        <AlertDialogContent className="bg-gray-900 border-yellow-400/30 text-white max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-bold text-yellow-400 flex items-center gap-2">
+              <QrCode className="w-6 h-6" />
+              Doação via Pix
+            </AlertDialogTitle>
+            <div className="text-gray-300 space-y-4">
+              <div className="mt-4 space-y-3">
+                <div className="bg-black/50 p-3 rounded-lg">
+                  <div className="text-gray-400 text-sm mb-1">Item:</div>
+                  <div className="text-white font-semibold">{name}</div>
+                </div>
+                
+                <div className="bg-black/50 p-3 rounded-lg">
+                  <div className="text-gray-400 text-sm mb-1">Valor sugerido:</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{price}</div>
+                </div>
+                
+                <div className="bg-black/50 p-3 rounded-lg">
+                  <div className="text-gray-400 text-sm mb-1">Chave PIX:</div>
+                  <code className="block bg-black p-2 rounded text-yellow-400 text-sm break-all font-mono">
+                    {pixKey}
+                  </code>
+                </div>
+
+                <div className="bg-yellow-400/10 border border-yellow-400/30 p-3 rounded-lg">
+                  <div className="text-yellow-400 text-sm font-semibold mb-1">📋 Como doar:</div>
+                  <ol className="text-gray-300 text-xs space-y-1 list-decimal list-inside">
+                    <li>Copie a chave PIX abaixo</li>
+                    <li>Abra o app do seu banco</li>
+                    <li>Escolha a opção Pagar com Pix</li>
+                    <li>Cole a chave PIX e o valor sugerido</li>
+                    <li>Confirme o pagamento</li>
+                  </ol>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-        <h3 className="text-lg font-semibold text-yellow-400 mb-2 line-clamp-2">{name}</h3>
-        <p className="text-gray-300 font-bold mb-4">{price}</p>
-        <Button
-          onClick={handleBuyClick}
-          className="w-full bg-yellow-400 text-black hover:bg-yellow-500 transition-colors gap-2 cursor-pointer"
-        >
-          <ShoppingBag className="w-4 h-4" />
-          Comprar
-          <ExternalLink className="w-3 h-3" />
-        </Button>
-      </CardContent>
-    </Card>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3">
+            <Button
+              onClick={copyPixKey}
+              className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 gap-2"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Chave PIX copiada!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copiar chave PIX
+                </>
+              )}
+            </Button>
+            <AlertDialogCancel className="bg-transparent border-gray-600 text-white hover:bg-gray-800 hover:text-white">
+              Fechar
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
-// Gift Items Data com links de compra adicionados
+// Gift Items Data - Substitua as chaves PIX pelos dados reais de vocês
 const giftItems = [
   {
     name: "Fogão Atlas 4 Bocas preto Mônaco Top Glass com Acendimento automático - Bivolt",
     price: "R$ 900,00",
     image: "/images/fogao.png",
-    link: "https://www.amazon.com.br/Atlas-M%C3%B4naco-Top-Glass-Acendimento/dp/B089WKK8N7/ref=sr_1_1?__mk_pt_BR=%C3%85M%C3%85%C5%BD%C3%95%C3%91&crid=2XR3Q8X6FPM83&dib=eyJ2IjoiMSJ9.NiwwT2ALMcdGrkaT0NMR7kZEm0KplB1cyT-s0ar4K3YaQ4XV5Rgi1lwXiT3HuGIqGQ6IRsc_Lne4nPUzFITxrLWitP_wJGXloY125W_wpobDk2ejZePAvDwBVSZq_DfU-cudk57_xqfm8qSARcnRqZZ5_q4_oUzwTPrkQTDPbYH2KXwsUzThsm3cQ5RlFyJB8_D2GV41ctSadKErrUp83tUTXAq8d2EaQT5IxmCmBgki6uciaTcZdOerJN8t7hx36eB4WCLNEGeiJLFw5Y_nYxWteiTZthqNjfZzrJ-s1Jo.lEAhp0VeB8WTuzpUQHPFXsur_7FVQQnrIiahOA5hCsk&dib_tag=se&keywords=Fog%C3%A3o+4+Bocas+Atlas+Atenas+Glass+com+Mesa+de+Vidro+e+Acendimento&qid=1778614496&sprefix=fog%C3%A3o+4+bocas+atlas+atenas+glass+com+mesa+de+vidro+e+acendimento%2Caps%2C226&sr=8-1&ufe=app_do%3Aamzn1.fos.95de73c3-5dda-43a7-bd1f-63af03b14751",
-    priority: true,
+    link: "https://www.amazon.com.br/Atlas-M%C3%B4naco-Top-Glass-Acendimento/dp/B089WKK8N7/ref=sr_1_1",
+    pixKey: "634.915.073-24", // 👈 Coloque o CPF, email ou telefone de vocês
   },
   {
     name: "Geladeira Electrolux Frost Free Inverter 322L",
     price: "R$ 3.900,00",
     image: "/images/geladeira.png",
-    link: "https://www.casasbahia.com.br/geladeira-electrolux-frost-free-inverter-322l-ib42g-efficient-com-autosense-inverse-e-painel-digital-black-glass/p/55067564?utm_medium=Cpc&utm_source=GP_PLA&IdSku=55067564&idLojista=10037&tipoLojista=1P&gclsrc=aw.ds&&utm_campaign=cb_b2c_gg_shopping_core_eldo_refrigerador&gad_source=1&gad_campaignid=22440733097&gclid=Cj0KCQjwk_bPBhDXARIsACiq8R1XxZUBOaxmW35cg2H2Hb3l2fMMl_bXfgVZJ873xw8jhp5dKFMyOMsaAmo_EALw_wcB",
-    priority: false,
+    link: "https://www.casasbahia.com.br/geladeira-electrolux-frost-free-inverter-322l-ib42g-efficient-com-autosense-inverse-e-painel-digital-black-glass/p/55067564",
+    pixKey: "634.915.073-24",
   },
   {
     name: "Máquina De Lavar 14kg Philco Preto 12 Programas 220v",
     price: "R$ 1.900,00",
     image: "/images/maquina.png",
-    link: "https://www.mercadolivre.com.br/maquina-de-lavar-14kg-philco-preto-12-programas-220v/up/MLBU2708270231?attributes=COLOR%3APreto_49cb43e_vpp%2CVOLTAGE%3A220V_177c66_vpp&pdp_filters=item_id%3AMLB3900918533&matt_tool=38524122#origin=share&sid=share&wid=MLB3900918533&action=copy",
-    priority: false,
+    link: "https://www.mercadolivre.com.br/maquina-de-lavar-14kg-philco-preto-12-programas-220v/up/MLBU2708270231",
+    pixKey: "634.915.073-24",
   },
   {
     name: "Micro-ondas Electrolux 23L Preto",
     price: "R$ 700,00",
     image: "/images/microondas.png",
-    link: "https://www.amazon.com.br/dp/B0B8LCYYX7?ref=cm_sw_r_cso_cp_apin_dp_7XYP64TR6YN5HDC87H9X&ref_=cm_sw_r_cso_cp_apin_dp_7XYP64TR6YN5HDC87H9X&social_share=cm_sw_r_cso_cp_apin_dp_7XYP64TR6YN5HDC87H9X&th=1",
-    priority: true,
+    link: "https://www.amazon.com.br/dp/B0B8LCYYX7",
+    pixKey: "634.915.073-24",
   },
   {
     name: "Britânia Sanduicheira e Grill Press 127V",
     price: "R$ 110,00",
     image: "/images/sanduicheira.png",
-    link: "https://www.amazon.com.br/Brit%C3%A2nia-SANDUICHEIRA-GRILL-PRESS-BGR27I/dp/B09WWY48B7/ref=mp_s_a_1_5?crid=32L4SKZ4FRZE1&dib=eyJ2IjoiMSJ9.r7TEi1_6CBOekdrAf7Wwfu7YZbDSbJly8Lg3ocJ8ypE2dlDT8us6zXfM__PS80zxh7PDDpFOuqXdZC_7Ea5jVsI0SDc7XXM2QerlNDNDW8SAMrdrmtS4a8-tG9Je9gKqPtrEUaNkyHXE34jz0PzkcvOU3N5OzISNiQw7OICl8hdsZ-oFOJRhS_YYEsIMO1luQ4Z-JnbL6kypGxEJAmcUug.A4t704dMyKBtB0yLHk9xtyqDWk--7-01aanwhejQ_oE&dib_tag=se&keywords=sanduicheira&qid=1777502988&sprefix=sabd%2Caps%2C244&sr=8-5&ufe=app_do%3Aamzn1.fos.6121c6c4-c969-43ae-92f7-cc248fc6181d&th=1",
-    priority: true,
+    link: "https://www.amazon.com.br/Brit%C3%A2nia-SANDUICHEIRA-GRILL-PRESS-BGR27I/dp/B09WWY48B7",
+    pixKey: "634.915.073-24",
   }
 ];
