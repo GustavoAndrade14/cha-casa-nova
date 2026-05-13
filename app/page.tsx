@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Gift, MapPin, Calendar, Heart, ShoppingBag, ExternalLink, QrCode, Copy, Check } from "lucide-react";
+import { Gift, MapPin, Calendar, Heart, ShoppingBag, ExternalLink, QrCode, Copy, Check, Sparkles, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -13,370 +13,628 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
+/* ─── Animations via <style> tag ─── */
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap');
+
+  * { box-sizing: border-box; }
+
+  body { font-family: 'Lato', sans-serif; }
+
+  .font-display { font-family: 'Playfair Display', serif; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-8px); }
+  }
+  @keyframes pulse-ring {
+    0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250,204,21,0.4); }
+    70%  { transform: scale(1);    box-shadow: 0 0 0 14px rgba(250,204,21,0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250,204,21,0); }
+  }
+  @keyframes borderGlow {
+    0%, 100% { border-color: rgba(250,204,21,0.3); }
+    50%       { border-color: rgba(250,204,21,0.8); }
+  }
+  @keyframes gradientMove {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animate-fade-in-up { animation: fadeInUp 0.8s ease forwards; }
+  .animate-fade-in    { animation: fadeIn   1s   ease forwards; }
+
+  .shimmer-text {
+    background: linear-gradient(90deg, #fbbf24, #fde68a, #f59e0b, #fde68a, #fbbf24);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 4s linear infinite;
+  }
+
+  .floating { animation: float 4s ease-in-out infinite; }
+
+  .avatar-ring { animation: pulse-ring 2.5s ease-in-out infinite; }
+
+  .border-glow { animation: borderGlow 3s ease-in-out infinite; }
+
+  .gradient-bg {
+    background: linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0d0d0d 100%);
+  }
+
+  .gold-line {
+    background: linear-gradient(90deg, transparent, #fbbf24, transparent);
+    height: 1px;
+  }
+
+  .card-hover {
+    transition: transform 0.35s cubic-bezier(.22,.68,0,1.2), box-shadow 0.35s ease, border-color 0.35s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(250,204,21,0.15);
+    border-color: rgba(250,204,21,0.7) !important;
+  }
+
+  .step-circle {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 0 20px rgba(250,204,21,0.4);
+  }
+
+  .info-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+  }
+  .info-card:hover {
+    background: linear-gradient(135deg, rgba(250,204,21,0.08), rgba(255,255,255,0.02));
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(250,204,21,0.1);
+  }
+
+  .photo-card {
+    transition: all 0.4s cubic-bezier(.22,.68,0,1.2);
+    overflow: hidden;
+  }
+  .photo-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 20px 40px rgba(250,204,21,0.2);
+    border-color: rgba(250,204,21,0.8) !important;
+  }
+  .photo-card img {
+    transition: transform 0.5s ease;
+  }
+  .photo-card:hover img {
+    transform: scale(1.06);
+  }
+
+  .pix-btn {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(22,163,74,0.25);
+  }
+  .pix-btn:hover {
+    background: linear-gradient(135deg, #15803d, #166534);
+    box-shadow: 0 6px 20px rgba(22,163,74,0.4);
+    transform: translateY(-1px);
+  }
+
+  .buy-btn {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(250,204,21,0.25);
+  }
+  .buy-btn:hover {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    box-shadow: 0 6px 20px rgba(250,204,21,0.4);
+    transform: translateY(-1px);
+  }
+
+  .section-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .section-reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  .gold-dot {
+    width: 6px; height: 6px;
+    background: #fbbf24;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #fbbf24;
+    flex-shrink: 0;
+    margin-top: 6px;
+  }
+
+  .ornament { color: #fbbf24; opacity: 0.4; font-size: 1.5rem; line-height: 1; user-select: none; }
+`;
+
+/* ─── Scroll reveal hook ─── */
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add("visible"); obs.disconnect(); } },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+/* ─── Main Page ─── */
 export default function Home() {
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header Section */}
-      <div className="container mx-auto px-4 py-12 text-center">
-        <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent mb-6">
-          Chá de Casa Nova
-        </h1>
-        <div className="flex justify-center items-center gap-4 text-2xl md:text-3xl text-yellow-400 mb-16">
-          <span>Gustavo</span>
-          <Heart className="text-yellow-400 w-8 h-8" />
-          <span>Mirela</span>
-        </div>
+    <>
+      <style>{styles}</style>
+      <div className="noise-overlay" />
 
-        {/* Profile Images */}
-        <div className="flex justify-center items-center gap-8 md:gap-16 mb-16">
-          <div className="relative">
-            <div className="w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-yellow-400 shadow-lg shadow-yellow-400/20 bg-gray-800 flex items-center justify-center">
-              <Image src="/mesmo.png" alt="Gustavo" width={800} height={800} />
-            </div>
-            <p className="text-center mt-3 text-yellow-400 font-semibold">Gustavo</p>
-          </div>
-          <div className="relative">
-            <div className="w-32 h-32 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-yellow-400 shadow-lg shadow-yellow-400/20 bg-gray-800 flex items-center justify-center">
-              <Image src="/mesma.png" alt="Mirela" width={800} height={800} />
-            </div>
-            <p className="text-center mt-3 text-yellow-400 font-semibold">Mirela</p>
-          </div>
-        </div>
-      </div>
+      <div className="min-h-screen gradient-bg text-white relative">
 
-      {/* Description Section */}
-      <div className="container mx-auto px-4 py-12">
-        <Card className="bg-black/50 border-yellow-400/30 backdrop-blur-sm">
-          <CardContent className="p-6 md:p-8">
-            <h2 className="text-3xl font-bold text-yellow-400 mb-4 text-center">
-              Sobre o Chá
-            </h2>
-            <p className="text-gray-300 text-lg leading-relaxed text-center">
-              Estamos muito felizes em anunciar que vamos morar juntos! 🏠✨<br />
-              Para celebrar esse novo capítulo em nossas vidas, convidamos você
-              para nosso Chá de Casa Nova. Sua presença e carinho já são
-              presentes especiais, mas se quiser nos ajudar a construir nosso
-              lar, selecionamos alguns itens que serão muito bem-vindos.
-              <br /><br />
-              <span className="text-yellow-400">
-                “Com a sabedoria se edifica a casa, e com a inteligência ela se firma!” - Provérbios 24:3
-              </span>
+        {/* ── HERO ── */}
+        <section className="relative overflow-hidden pt-20 pb-16 text-center px-4">
+          {/* background glow blobs */}
+          <div style={{ position: "absolute", top: "-80px", left: "50%", transform: "translateX(-50%)", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(250,204,21,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+          <div className="relative z-10 max-w-3xl mx-auto" style={{ animation: "fadeInUp 0.9s ease forwards" }}>
+            <p className="font-display text-yellow-400/60 tracking-[0.3em] text-sm uppercase mb-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+              Bem-vindo ao nosso
             </p>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Important Information */}
-      <div className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-yellow-400 mb-8 text-center">
-          Informações Importantes
-        </h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="bg-black/50 border-yellow-400/30">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <Calendar className="text-yellow-400 w-6 h-6 mt-1" />
+            <h1 className="font-display shimmer-text text-6xl md:text-8xl font-bold mb-3 leading-tight">
+              Chá de Casa Nova
+            </h1>
+
+            <div className="flex justify-center items-center gap-4 text-2xl text-yellow-300 mb-10 font-display italic" style={{ animation: "fadeInUp 0.9s 0.2s ease both" }}>
+              <span>Gustavo</span>
+              <Heart className="text-yellow-400 w-6 h-6 fill-yellow-400 floating" />
+              <span>Mirela</span>
+            </div>
+
+            <div className="gold-line w-48 mx-auto mb-12" />
+
+            {/* avatars */}
+            <div className="flex justify-center items-center gap-12 md:gap-20" style={{ animation: "fadeInUp 0.9s 0.35s ease both" }}>
+              {[{ src: "/mesmo.png", name: "Gustavo" }, { src: "/mesma.png", name: "Mirela" }].map(p => (
+                <div key={p.name} className="flex flex-col items-center gap-3">
+                  <div className="avatar-ring w-36 h-36 md:w-52 md:h-52 rounded-full overflow-hidden border-2 border-yellow-400 shadow-2xl bg-gray-900">
+                    <Image src={p.src} alt={p.name} width={800} height={800} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="font-display text-yellow-400 text-lg font-semibold tracking-wide">{p.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── SOBRE ── */}
+        <RevealSection>
+          <div className="container mx-auto px-4 pb-16 max-w-3xl">
+            <div className="info-card border border-yellow-400/20 rounded-2xl p-8 md:p-10 text-center">
+              <span className="ornament block mb-2">✦ ✦ ✦</span>
+              <h2 className="font-display text-3xl text-yellow-400 mb-5">Sobre o Chá</h2>
+              <p className="text-gray-300 text-lg leading-relaxed">
+                Estamos muito felizes em anunciar que vamos morar juntos! 🏠✨
+                <br /><br />
+                Para celebrar esse novo capítulo, convidamos você para o nosso Chá de Casa Nova.
+                Sua presença e carinho já são presentes especiais — mas se quiser nos ajudar
+                a construir nosso lar, selecionamos alguns itens que serão muito bem-vindos.
+              </p>
+              <div className="gold-line w-32 mx-auto my-6" />
+              <p className="font-display italic text-yellow-400/80 text-base">
+                "Com a sabedoria se edifica a casa, e com a inteligência ela se firma."
+                <br /><span className="text-yellow-400/50 text-sm not-italic">— Provérbios 24:3</span>
+              </p>
+            </div>
+          </div>
+        </RevealSection>
+
+        {/* ── DATA & LOCAL ── */}
+        <RevealSection>
+          <div className="container mx-auto px-4 pb-16 max-w-4xl">
+            <SectionTitle>Informações Importantes</SectionTitle>
+            <div className="grid md:grid-cols-2 gap-6">
+
+              <div className="info-card border border-yellow-400/20 rounded-2xl p-7 flex items-start gap-5">
+                <div className="w-12 h-12 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="text-yellow-400 w-6 h-6" />
+                </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-yellow-400 mb-2">
-                    Data e Horário
-                  </h3>
-                  <p className="text-gray-300">dia de mes de ano</p>
-                  <p className="text-gray-300">hora - hora</p>
+                  <h3 className="font-display text-xl text-yellow-400 mb-2">Data e Horário</h3>
+                  <div className="space-y-1">
+                    <div className="flex items-start gap-2 text-gray-300">
+                      <span className="gold-dot" />
+                      <span>dia de mês de ano</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-gray-300">
+                      <span className="gold-dot" />
+                      <span>hora — hora</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-black/50 border-yellow-400/30">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <MapPin className="text-yellow-400 w-6 h-6 mt-1" />
+              <div className="info-card border border-yellow-400/20 rounded-2xl p-7 flex items-start gap-5">
+                <div className="w-12 h-12 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="text-yellow-400 w-6 h-6" />
+                </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-yellow-400 mb-2">
-                    Local
-                  </h3>
-                  <p className="text-gray-300">Rua, numero - complemento</p>
-                  <p className="text-gray-300">Fortaleza - CE, CEP</p>
+                  <h3 className="font-display text-xl text-yellow-400 mb-2">Local</h3>
+                  <div className="space-y-1">
+                    <div className="flex items-start gap-2 text-gray-300">
+                      <span className="gold-dot" />
+                      <span>Rua, número — complemento</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-gray-300">
+                      <span className="gold-dot" />
+                      <span>Fortaleza — CE, CEP</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
 
-      {/* How to Use Section */}
-      <div className="container mx-auto px-4 py-12">
-        <Card className="bg-gradient-to-r from-yellow-400/10 to-transparent border-yellow-400/30">
-          <CardContent className="p-6 md:p-8">
-            <h2 className="text-3xl font-bold text-yellow-400 mb-6 text-center">
-              Como Usar o Site
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-yellow-400 text-black font-bold text-xl flex items-center justify-center mx-auto mb-4">
-                  1
-                </div>
-                <p className="text-gray-300">
-                  Navegue pelos nossos itens desejados na lista abaixo onde estão os itens que selecionamos para nosso lar. Cada item tem um link de compra para facilitar a aquisição.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-yellow-400 text-black font-bold text-xl flex items-center justify-center mx-auto mb-4">
-                  2
-                </div>
-                <p className="text-gray-300">
-                  Clique no botão Comprar para ser redirecionado à loja onde o item está disponível para compra. Após comprar o item, não esqueça de marcar como comprado para que possamos atualizar nossa lista e evitar compras duplicadas.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-yellow-400 text-black font-bold text-xl flex items-center justify-center mx-auto mb-4">
-                  3
-                </div>
-                <p className="text-gray-300">
-                  Caso não queira comprar o item, mas queira ajudar dando o valor de algum item, clique no botão Pix para fazer uma doação via Pix. O valor arrecadado será utilizado
-                  para comprar os itens da lista.
-                </p>
+            </div>
+          </div>
+        </RevealSection>
+
+        {/* ── COMO USAR ── */}
+        <RevealSection>
+          <div className="container mx-auto px-4 pb-16 max-w-4xl">
+            <div className="info-card border border-yellow-400/20 rounded-2xl p-8 md:p-10">
+              <SectionTitle>Como Usar o Site</SectionTitle>
+              <div className="grid md:grid-cols-5 gap-8">
+                {[
+                  "Navegue pelos itens abaixo. Cada um tem link direto para a loja onde está disponível para compra.",
+                  "Clique em Comprar para ir à loja. Após comprar, avise-nos para evitar presentes duplicados.",
+                  "Prefere contribuir com um valor? Clique em Pix para receber nossa chave e fazer sua doação.",
+                  "Se quiser doar um valor diferente dos itens listados, temos uma opção de Pix livre no final da página.",
+                  "Se Comprar ou doar via Pix, por favor nos avise para que possamos agradecer e atualizar a lista de presentes. Toda ajuda é muito bem-vinda!"
+                ].map((text, i) => (
+                  <div key={i} className="flex flex-col items-center text-center gap-4">
+                    <div className="step-circle w-12 h-12 rounded-full flex items-center justify-center text-black font-bold text-xl font-display">
+                      {i + 1}
+                    </div>
+                    <p className="text-gray-300 leading-relaxed text-sm">{text}</p>
+                  </div>
+                ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </RevealSection>
+
+        {/* ── PRESENTES ── */}
+        <RevealSection>
+          <div className="container mx-auto px-4 pb-16 max-w-6xl">
+            <SectionTitle>Nossos Itens Desejados</SectionTitle>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {giftItems.map((item, i) => (
+                <GiftCard key={i} {...item} />
+              ))}
+            </div>
+          </div>
+        </RevealSection>
+
+        {/* ── PIX LIVRE ── */}
+        <RevealSection>
+          <div className="container mx-auto px-4 pb-16 max-w-3xl">
+            <div
+              className="rounded-2xl border-2 border-yellow-400/40 p-8 md:p-12 text-center"
+              style={{ background: "linear-gradient(135deg, rgba(250,204,21,0.04) 0%, rgba(250,204,21,0.09) 50%, rgba(250,204,21,0.04) 100%)", boxShadow: "0 20px 60px rgba(250,204,21,0.06)" }}
+            >
+              <div className="inline-flex items-center justify-center p-3 bg-yellow-400/15 border border-yellow-400/30 rounded-full mb-5">
+                <CreditCard className="w-8 h-8 text-yellow-400" />
+              </div>
+              <SectionTitle>Contribua com Qualquer Valor</SectionTitle>
+              <p className="text-gray-300 text-lg max-w-xl mx-auto mb-8 leading-relaxed">
+                Se preferir, você pode fazer uma contribuição de qualquer valor para nos ajudar
+                a conquistar nossos itens. Toda ajuda é bem-vinda e muito apreciada!
+              </p>
+              <div className="max-w-md mx-auto">
+                <FreeValuePixCard pixKey={pixKeyFree} qrCodeImage="/pix.jpeg" />
+              </div>
+            </div>
+          </div>
+        </RevealSection>
+
+        {/* ── FOTOS ── */}
+        <RevealSection>
+          <div className="container mx-auto px-4 pb-16 max-w-6xl">
+            <SectionTitle>Nossos Momentos Juntos</SectionTitle>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { src: "/foto8.png", alt: "Nós" },
+                { src: "/foto3.png", alt: "Natal" },
+                { src: "/foto5.png", alt: "Pedido de namoro" },
+              ].map(({ src, alt }) => (
+                <div key={src} className="photo-card relative rounded-2xl border-2 border-yellow-400/25 bg-gray-900 h-72 overflow-hidden">
+                  <Image src={src} alt={alt} fill className="object-cover" />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)" }} />
+                  <span style={{ position: "absolute", bottom: "12px", left: "16px", color: "rgba(250,204,21,0.8)", fontSize: "0.8rem", fontFamily: "Lato, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" }}>{alt}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </RevealSection>
+
+        {/* ── FOOTER ── */}
+        <footer className="border-t border-yellow-400/20 py-10 text-center px-4">
+          <div className="gold-line w-24 mx-auto mb-6" />
+          <div className="flex justify-center items-center gap-2 text-yellow-400/60 mb-2">
+            <Heart className="w-4 h-4 fill-yellow-400/40" />
+            <span className="font-display italic text-sm">Gustavo & Mirela</span>
+            <Heart className="w-4 h-4 fill-yellow-400/40" />
+          </div>
+          <p className="text-gray-600 text-xs tracking-widest uppercase">
+            © 2026 Chá de Casa Nova · Todos os direitos reservados
+          </p>
+        </footer>
+
       </div>
+    </>
+  );
+}
 
-      <div className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-yellow-400 mb-8 text-center">
-          Nossos Itens Desejados
-        </h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {giftItems
-            .map((item, index) => (
-              <GiftCard key={index} {...item} />
-            ))}
-        </div>
-
-        {giftItems.length === 0 && (
-          <div className="text-center text-gray-400 py-12">
-            Nenhum item encontrado nesta categoria.
-          </div>
-        )}
-      </div>
-
-      {/* Couple Photos Section */}
-      <div className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-yellow-400 mb-8 text-center">
-          Nossos Momentos Juntos
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="relative group overflow-hidden rounded-lg border-2 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 bg-gray-800 h-64 flex items-center justify-center">
-            <Image
-              src="/foto8.png"
-              alt="Nós"
-              width={400}
-              height={400}
-              suppressHydrationWarning
-            />
-          </div>
-          <div className="relative group overflow-hidden rounded-lg border-2 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 bg-gray-800 h-64 flex items-center justify-center">
-            <Image
-              src="/foto3.png"
-              alt="natal"
-              width={400}
-              height={400}
-              suppressHydrationWarning
-            />
-          </div>
-          <div className="relative group overflow-hidden rounded-lg border-2 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 bg-gray-800 h-64 flex items-center justify-center">
-            <Image
-              src="/foto5.png"
-              alt="Pedido de namoro"
-              width={400}
-              height={400}
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 text-center border-t border-yellow-400/30 mt-12">
-        <p className="text-gray-400">
-          © 2026 Chá de Casa Nova - Gustavo & Mirela. Todos os direitos reservados.
-        </p>
-      </footer>
+/* ─── Helpers ─── */
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-center mb-10">
+      <h2 className="font-display text-3xl md:text-4xl text-yellow-400 mb-3">{children}</h2>
+      <div className="gold-line w-20 mx-auto" />
     </div>
   );
 }
 
-function GiftCard({
-  name,
-  price,
-  image,
-  link,
-  pixKey,
-}: {
-  name: string;
-  price: string;
-  image: string;
-  link: string;
-  pixKey: string;
+function RevealSection({ children }: { children: React.ReactNode }) {
+  const ref = useReveal();
+  return <div ref={ref} className="section-reveal">{children}</div>;
+}
+
+/* ─── Gift Card ─── */
+function GiftCard({ name, price, image, link, pixKey }: {
+  name: string; price: string; image: string; link: string; pixKey: string;
 }) {
   const [imageError, setImageError] = useState(false);
   const [showPixDialog, setShowPixDialog] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleBuyClick = () => {
-    window.open(link, '_blank', 'noopener,noreferrer');
-  };
-
-  const handlePixClick = () => {
-    setShowPixDialog(true);
-  };
-
   const copyPixKey = () => {
     navigator.clipboard.writeText(pixKey);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   return (
     <>
-      <Card className="bg-black/50 border-yellow-400/30 hover:border-yellow-400 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-yellow-400/20">
-        <CardContent className="p-4">
-          <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
-            {!imageError ? (
-              <Image
-                src={image}
-                alt={name}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-contain p-4"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center text-yellow-400">
-                <Gift className="w-12 h-12 mb-2" />
-                <span className="text-sm text-center px-4">Imagem não disponível</span>
-              </div>
-            )}
-          </div>
-          <h3 className="text-lg font-semibold text-yellow-400 mb-2 line-clamp-2">{name}</h3>
-          <p className="text-gray-300 font-bold mb-4">{price}</p>
+      <div className="card-hover rounded-2xl border border-yellow-400/25 bg-black/60 overflow-hidden flex flex-col" style={{ backdropFilter: "blur(10px)" }}>
+        {/* image */}
+        <div className="relative w-full h-52 bg-gray-900 flex items-center justify-center">
+          {!imageError ? (
+            <Image
+              src={image} alt={name} fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-contain p-5"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="flex flex-col items-center text-yellow-400/50 gap-2">
+              <Gift className="w-10 h-10" />
+              <span className="text-xs">Imagem indisponível</span>
+            </div>
+          )}
+          {/* top gold line */}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.5), transparent)" }} />
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              onClick={handleBuyClick}
-              className="flex-1 h-14 sm:h-20 bg-yellow-400 text-black hover:bg-yellow-500 transition-all duration-300 gap-2 cursor-pointer text-base sm:text-sm font-semibold rounded-xl shadow-lg shadow-yellow-500/20 active:scale-[0.98] py-4 sm:py-0"
+        {/* body */}
+        <div className="p-5 flex flex-col flex-1 gap-4">
+          <div>
+            <h3 className="font-display text-yellow-300 text-base font-semibold leading-snug mb-1 line-clamp-2">{name}</h3>
+            <p className="text-yellow-400 font-bold text-lg">{price}</p>
+          </div>
+
+          <div className="flex gap-3 mt-auto">
+            <button
+              onClick={() => window.open(link, "_blank", "noopener,noreferrer")}
+              className="buy-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-black font-bold text-sm cursor-pointer"
             >
-              <ShoppingBag className="w-5 h-5 sm:w-4 sm:h-4" />
+              <ShoppingBag className="w-4 h-4" />
               Comprar
-              <ExternalLink className="w-4 h-4 sm:w-3 sm:h-3" />
-            </Button>
+              <ExternalLink className="w-3 h-3" />
+            </button>
 
-            <Button
-              onClick={handlePixClick}
-              className="flex-1 h-14 sm:h-20 bg-green-600 text-white hover:bg-green-700 transition-all duration-300 gap-2 cursor-pointer text-base sm:text-sm font-semibold rounded-xl shadow-lg shadow-green-500/20 active:scale-[0.98] py-4 sm:py-0"
+            <button
+              onClick={() => setShowPixDialog(true)}
+              className="pix-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-white font-bold text-sm cursor-pointer"
             >
-              <QrCode className="w-5 h-5 sm:w-4 sm:h-4" />
+              <QrCode className="w-4 h-4" />
               Pix
-            </Button>
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* ── Pix Dialog ── */}
       <AlertDialog open={showPixDialog} onOpenChange={setShowPixDialog}>
-        <AlertDialogContent className="bg-gray-900 border-yellow-400/30 text-white max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-bold text-yellow-400 flex items-center gap-2">
-              <QrCode className="w-6 h-6" />
-              Doação via Pix
-            </AlertDialogTitle>
-            <div className="text-gray-300 space-y-4">
-              <div className="mt-4 space-y-3">
-                <div className="bg-black/50 p-3 rounded-lg">
-                  <div className="text-gray-400 text-sm mb-1">Item:</div>
-                  <div className="text-white font-semibold">{name}</div>
-                </div>
+        <AlertDialogContent className="flex flex-col items-center gap-6 rounded-2xl border border-yellow-400/30 bg-gray-900 p-6 md:p-10">
+          <AlertDialogHeader className="relative z-10 space-y-5 w-full max-w-md mx-auto text-center">
+            <div className="text-center">
+              <span className="ornament block mb-1">✦</span>
+              <AlertDialogTitle className="font-display text-3xl text-yellow-400">Doação via Pix</AlertDialogTitle>
+              <p className="text-gray-400 text-sm mt-1">Ajude a tornar nosso lar ainda mais especial</p>
+            </div>
 
-                <div className="bg-black/50 p-3 rounded-lg">
-                  <div className="text-gray-400 text-sm mb-1">Valor sugerido:</div>
-                  <div className="text-yellow-400 text-2xl font-bold">{price}</div>
-                </div>
+            <div className="space-y-3">
+              {/* item */}
+              <div className="rounded-2xl border border-white/8 bg-white/3 p-4 text-left">
+                <span className="text-xs uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+                  <Gift className="w-3 h-3" /> Item escolhido
+                </span>
+                <p className="text-white font-medium leading-snug">{name}</p>
+              </div>
 
-                <div className="bg-black/40 border border-white/10 p-4 rounded-2xl backdrop-blur-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-400 font-medium">
-                      Chave PIX
+              <div className="rounded-2xl border border-white/8 bg-white/3 p-4 text-left">
+                <span className="text-xs uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+                  <Gift className="w-3 h-3" /> Imformação importante
+                </span>
+                <p className="text-white font-medium leading-snug">Após efetuar o pix, envie o comprovante para o nós</p>
+              </div>
+
+              {/* pix key */}
+              <div className="rounded-2xl border border-white/8 bg-black/50 p-4 space-y-3 text-left">
+                <div className="flex items-center gap-2">
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80", animation: "pulse-ring 2s infinite", flexShrink: 0 }} />
+                  <span className="text-sm text-gray-300 font-semibold">Chave PIX</span>
+                  {copied && (
+                    <span className="ml-auto flex items-center gap-1 text-green-400 text-xs bg-green-400/10 px-2 py-1 rounded-full">
+                      <Check className="w-3 h-3" /> Copiado!
                     </span>
+                  )}
+                </div>
+                <button
+                  onClick={copyPixKey}
+                  className="w-full flex items-center justify-between gap-3 bg-black/40 hover:bg-yellow-400/8 border border-white/10 hover:border-yellow-400/40 rounded-xl p-3 transition-all duration-300 group cursor-pointer"
+                >
+                  <code className="text-yellow-400 text-sm font-mono break-all text-left flex-1">{pixKey}</code>
+                  <div className="shrink-0 p-1.5 rounded-lg bg-white/5 group-hover:bg-yellow-400/15 transition-all">
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-gray-400 group-hover:text-yellow-400 transition-colors" />}
                   </div>
-
-                  <Button
-                    onClick={copyPixKey}
-                    variant="outline"
-                    className={`
-      w-full justify-between items-center
-      bg-black/60 hover:bg-black/80
-      border-white/10 hover:border-yellow-400/40
-      text-white rounded-xl h-auto p-3
-      transition-all duration-300 cursor-pointer
-    `}
-                  >
-                    <code className="flex-1 text-left text-yellow-400 text-sm break-all font-mono pr-3">
-                      {pixKey}
-                    </code>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {copied ? (
-                        <>
-                          <Check className="w-4 h-4 text-green-400" />
-                          <span className="text-green-400 text-sm">
-                            Copiado
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4 text-gray-300" />
-                          <span className="text-sm text-gray-300">
-                            Copiar
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </Button>
-                </div>
-
-                <div className="bg-yellow-400/10 border border-yellow-400/30 p-3 rounded-lg">
-                  <div className="text-yellow-400 text-sm font-semibold mb-1">📋 Como doar:</div>
-                  <ol className="text-gray-300 text-xs space-y-1 list-decimal list-inside">
-                    <li>Copie a chave PIX acima</li>
-                    <li>Abra o app do seu banco</li>
-                    <li>Escolha a opção Pagar com Pix</li>
-                    <li>Cole a chave PIX e o valor sugerido</li>
-                    <li>Confirme o pagamento</li>
-                  </ol>
-                </div>
+                </button>
+                <p className="text-xs text-gray-600 text-center">👆 Toque para copiar a chave Pix</p>
               </div>
             </div>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="bg-transparent border-gray-600 text-white hover:bg-gray-800 hover:text-white">
+
+          <AlertDialogFooter className="mt-4 relative z-10 w-full max-w-md mx-auto">
+            <AlertDialogCancel className="w-full bg-red-500/8 hover:bg-red-500/15 border border-red-500/20 hover:border-red-500/35 text-gray-400 hover:text-red-300 rounded-xl h-11 font-medium transition-all duration-300 cursor-pointer">
               Fechar
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog >
+      </AlertDialog>
     </>
   );
 }
 
-// Gift Items Data - Substitua as chaves PIX pelos dados reais de vocês
+/* ─── Pix livre ─── */
+const pixKeyFree = "634.915.073-24";
+
+/* ─── Free Value Pix Card ─── */
+function FreeValuePixCard({ pixKey, qrCodeImage }: { pixKey: string; qrCodeImage: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyPixKey = () => {
+    navigator.clipboard.writeText(pixKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* QR Code */}
+      <div className="text-center">
+        <div className="inline-block p-4 rounded-2xl mb-4 shadow-lg shadow-yellow-400/10">
+          <Image
+            src={qrCodeImage}
+            alt="QR Code Pix"
+            width={200}
+            height={200}
+            suppressHydrationWarning
+            className="mx-auto"
+          />
+        </div>
+        <p className="text-sm text-gray-400">
+          Escaneie o QR Code pelo seu banco ou aplicativo de pagamento
+        </p>
+      </div>
+
+      {/* Divider */}
+      <div className="relative flex items-center gap-3">
+        <div className="flex-1 border-t border-yellow-400/20" />
+        <span className="text-xs text-gray-500 px-2">ou</span>
+        <div className="flex-1 border-t border-yellow-400/20" />
+      </div>
+
+      {/* Pix Key */}
+      <div className="space-y-3">
+        <p className="text-sm text-gray-300 text-center">
+          Copie nossa chave PIX e faça a transferência diretamente no seu aplicativo bancário
+        </p>
+
+        <div className="rounded-2xl border border-white/8 bg-black/50 p-4 space-y-3" style={{ backdropFilter: "blur(12px)" }}>
+          <div className="flex items-center gap-2">
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80", flexShrink: 0 }} className="animate-pulse" />
+            <span className="text-sm text-gray-300 font-semibold">Chave PIX (CPF)</span>
+            {copied && (
+              <span className="ml-auto flex items-center gap-1 text-green-400 text-xs bg-green-400/10 px-2 py-1 rounded-full">
+                <Check className="w-3 h-3" /> Copiado!
+              </span>
+            )}
+          </div>
+
+          <button
+            onClick={copyPixKey}
+            className="w-full flex items-center justify-between gap-3 bg-black/40 hover:bg-yellow-400/8 border border-white/10 hover:border-yellow-400/40 rounded-xl p-3 transition-all duration-300 group cursor-pointer"
+          >
+            <code className="flex-1 text-left text-yellow-400 text-sm break-all font-mono tracking-wide">
+              {pixKey}
+            </code>
+            <div className="shrink-0 p-1.5 rounded-lg bg-white/5 group-hover:bg-yellow-400/15 transition-all">
+              {copied ? (
+                <Check className="w-4 h-4 text-green-400" />
+              ) : (
+                <Copy className="w-4 h-4 text-gray-400 group-hover:text-yellow-400 transition-colors" />
+              )}
+            </div>
+          </button>
+
+          <p className="text-xs text-gray-600 text-center">
+            Qualquer valor é bem-vindo! Agradecemos sua generosidade
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Gift Items Data ─── */
 const giftItems = [
   {
     name: "Fogão Atlas 4 Bocas preto Mônaco Top Glass com Acendimento automático - Bivolt",
     price: "R$ 900,00",
     image: "/images/fogao.png",
     link: "https://www.amazon.com.br/Atlas-M%C3%B4naco-Top-Glass-Acendimento/dp/B089WKK8N7/ref=sr_1_1",
-    pixKey: "634.915.073-24", // 👈 Coloque o CPF, email ou telefone de vocês
+    pixKey: "634.915.073-24",
   },
   {
     name: "Geladeira Electrolux Frost Free Inverter 322L",
@@ -397,7 +655,7 @@ const giftItems = [
     price: "R$ 700,00",
     image: "/images/microondas.png",
     link: "https://www.amazon.com.br/dp/B0B8LCYYX7",
-    pixKey: "634.915.073-24",
+    pixKey: "00020101021126360014br.gov.bcb.pix0114+55859896285965204000053039865406700.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304443E",
   },
   {
     name: "Britânia Sanduicheira e Grill Press 127V",
@@ -405,5 +663,5 @@ const giftItems = [
     image: "/images/sanduicheira.png",
     link: "https://www.amazon.com.br/Brit%C3%A2nia-SANDUICHEIRA-GRILL-PRESS-BGR27I/dp/B09WWY48B7",
     pixKey: "634.915.073-24",
-  }
+  },
 ];
