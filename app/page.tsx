@@ -427,6 +427,7 @@ function GiftCard({ name, price, image, link, pixKey }: {
   const [imageError, setImageError] = useState(false);
   const [showPixDialog, setShowPixDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true)
 
   const copyPixKey = () => {
     navigator.clipboard.writeText(pixKey);
@@ -438,54 +439,65 @@ function GiftCard({ name, price, image, link, pixKey }: {
     <>
       <div className="card-hover rounded-2xl border border-yellow-400/25 bg-black/60 overflow-hidden flex flex-col" style={{ backdropFilter: "blur(10px)" }}>
         {/* image */}
-        <div className="relative w-full h-52 bg-gray-900 flex items-center justify-center">
+        <div className="relative w-full h-52 bg-gray-900 flex items-center justify-center overflow-hidden">
+          {imageLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+            </div>
+          )}
           {!imageError ? (
             <Image
-              src={image} alt={name} fill
+              src={image}
+              alt={name}
+              fill
               sizes="(max-width: 768px) 100vw, 33vw"
-              className="object-contain p-5"
-              onError={() => setImageError(true)}
+              className="object-contain p-5 transition-all duration-300"
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+              }}
+              onLoad={() => setImageLoading(false)}
+              unoptimized // Adicione isso para imagens externas
             />
           ) : (
             <div className="flex flex-col items-center text-yellow-400/50 gap-2">
               <Gift className="w-10 h-10" />
-              <span className="text-xs">Imagem indisponível</span>
+              <span className="text-xs">Imagem ilustrativa</span>
             </div>
           )}
-          {/* top gold line */}
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.5), transparent)" }} />
         </div>
 
         {/* body */}
-        <div className="p-5 flex flex-col flex-1 gap-4">
+        <div className="p-4 flex flex-col flex-1 gap-3">
           <div>
-            <h3 className="font-display text-yellow-300 text-base font-semibold leading-snug mb-1 line-clamp-2">{name}</h3>
+            <h3 className="font-display text-yellow-300 text-sm font-semibold leading-snug mb-1 line-clamp-2 min-h-[40px]">{name}</h3>
             <p className="text-yellow-400 font-bold text-lg">{price}</p>
           </div>
 
           <div className="flex gap-3 mt-auto">
             <button
               onClick={() => window.open(link, "_blank", "noopener,noreferrer")}
-              className="buy-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-black font-bold text-sm cursor-pointer"
+              className="buy-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-black font-bold text-xs sm:text-sm cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4" />
-              Comprar
+              <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Comprar</span>
               <ExternalLink className="w-3 h-3" />
             </button>
 
             <button
               onClick={() => setShowPixDialog(true)}
-              className="pix-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-3 text-white font-bold text-sm cursor-pointer"
+              className="pix-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-white font-bold text-xs sm:text-sm cursor-pointer"
             >
-              <QrCode className="w-4 h-4" />
-              Pix
+              <QrCode className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">Pix</span>
             </button>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* ── Pix Dialog ── */}
-      <AlertDialog open={showPixDialog} onOpenChange={setShowPixDialog}>
+      < AlertDialog open={showPixDialog} onOpenChange={setShowPixDialog} >
         <AlertDialogContent className="flex flex-col items-center gap-6 rounded-2xl border border-yellow-400/30 bg-gray-900 p-6 md:p-10">
           <AlertDialogHeader className="relative z-10 space-y-5 w-full max-w-md mx-auto text-center">
             <div className="text-center">
@@ -541,7 +553,7 @@ function GiftCard({ name, price, image, link, pixKey }: {
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
     </>
   );
 }
@@ -739,27 +751,6 @@ const giftItems = [
     image: "https://m.media-amazon.com/images/I/61XdL09osnL._AC_SX679_.jpg",
     link: "https://www.amazon.com.br/dp/B0GP8JD35Z?ref=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&ref_=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&social_share=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB",
     pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540590.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304813F",
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "https://m.media-amazon.com/images/I/41mb9zY2LHL._SX466_.jpg",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "https://m.media-amazon.com/images/I/41mb9zY2LHL._SX466_.jpg",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "https://m.media-amazon.com/images/I/41mb9zY2LHL._SX466_.jpg",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
   },
   {
     name: "Lixeira de Aço Inox 5 Litros",
