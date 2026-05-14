@@ -337,6 +337,21 @@ export default function Home() {
         <RevealSection>
           <div className="container mx-auto px-4 pb-16 max-w-6xl">
             <SectionTitle>Nossos Itens Desejados</SectionTitle>
+            {giftItems.length === 0 ? (
+              <div className="text-center text-yellow-400 py-10">
+                <p>Carregando itens...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {giftItems.map((item, i) => (
+                  <GiftCard key={i} {...item} />
+                ))}
+              </div>
+            )}
+          </div>
+        </RevealSection><RevealSection>
+          <div className="container mx-auto px-4 pb-16 max-w-6xl">
+            <SectionTitle>Nossos Itens Desejados</SectionTitle>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {giftItems.map((item, i) => (
                 <GiftCard key={i} {...item} />
