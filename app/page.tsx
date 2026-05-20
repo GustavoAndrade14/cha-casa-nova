@@ -349,15 +349,6 @@ export default function Home() {
               </div>
             )}
           </div>
-        </RevealSection><RevealSection>
-          <div className="container mx-auto px-4 pb-16 max-w-6xl">
-            <SectionTitle>Nossos Itens Desejados</SectionTitle>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {giftItems.map((item, i) => (
-                <GiftCard key={i} {...item} />
-              ))}
-            </div>
-          </div>
         </RevealSection>
 
         {/* ── PIX LIVRE ── */}
@@ -710,5 +701,82 @@ const giftItems = [
     image: "https://m.media-amazon.com/images/I/51QJNzNg7lL._AC_SX679_.jpg",
     link: "https://www.amazon.com.br/dp/B0CD14V4RQ?ref=cm_sw_r_cso_cp_mwn_dp_SP2S6HE2PECQC4TZW10Z&ref_=cm_sw_r_cso_cp_mwn_dp_SP2S6HE2PECQC4TZW10Z&social_share=cm_sw_r_cso_cp_mwn_dp_SP2S6HE2PECQC4TZW10Z&th=1",
     pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406300.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63040898",
+  },
+  {
+    name: "Garrafa Térmica 1L Premium - Preto",
+    price: "R$ 42,00",
+    image: "https://m.media-amazon.com/images/I/61fzrLv-7FL._AC_SX679_.jpg",
+    link: "https://www.amazon.com.br/dp/B0GV4LDL88?ref=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF&ref_=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF&social_share=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540542.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304274E",
+  },
+  {
+    name: "Kit 15 Potes Tampa Hermético",
+    price: "R$ 105,00",
+    image: "https://m.media-amazon.com/images/I/71I-REC9Q1L._AC_SX569_.jpg",
+    link: "https://www.amazon.com.br/dp/B0GX7FVTPB?ref=cm_sw_r_cso_cp_mwn_dp_W97P5WC2A6G18QE2EKJJ&ref_=cm_sw_r_cso_cp_mwn_dp_W97P5WC2A6G18QE2EKJJ&social_share=cm_sw_r_cso_cp_mwn_dp_W97P5WC2A6G18QE2EKJJ",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406105.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304AB9C",
+  },
+  {
+    name: "Kit 5 Potes de Vidro Herméticos 640ml",
+    price: "R$ 53,00",
+    image: "https://m.media-amazon.com/images/I/51X+R6OKhZL._AC_SX569_.jpg",
+    link: "https://www.amazon.com.br/dp/B0GXGTZF1M?ref=cm_sw_r_cso_cp_mwn_dp_01W1XHJWYMNT8382WSTD&ref_=cm_sw_r_cso_cp_mwn_dp_01W1XHJWYMNT8382WSTD&social_share=cm_sw_r_cso_cp_mwn_dp_01W1XHJWYMNT8382WSTD&th=1",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540553.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304395F",
+  },
+  {
+    name: "Jogo de Talheres Faqueiro Inox 24 Peças",
+    price: "R$ 120,00",
+    image: "https://m.media-amazon.com/images/I/61NlXehlnBL._AC_SX679_.jpg",
+    link: "https://www.amazon.com.br/dp/B07WGQ64QR?ref=cm_sw_r_cso_cp_mwn_dp_KXGN2387A05C23VA7B83_1&ref_=cm_sw_r_cso_cp_mwn_dp_KXGN2387A05C23VA7B83_1&social_share=cm_sw_r_cso_cp_mwn_dp_KXGN2387A05C23VA7B83_1",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406120.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304DD47",
+  },
+  {
+    name: "Electrolux Ferro de Passar Roupa Seco e Vapor",
+    price: "R$ 120,00",
+    image: "https://m.media-amazon.com/images/I/615lcRiykKL._AC_SX679_.jpg",
+    link: "https://www.amazon.com.br/dp/B09LJYZWX7?ref=cm_sw_r_cso_cp_mwn_dp_5PWZ4DVH7AWZG3PBRH2P&ref_=cm_sw_r_cso_cp_mwn_dp_5PWZ4DVH7AWZG3PBRH2P&social_share=cm_sw_r_cso_cp_mwn_dp_5PWZ4DVH7AWZG3PBRH2P&th=1",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406120.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304DD47",
+  },
+  {
+    name: "Cafeteira Elétrica Electrolux inox - Preto",
+    price: "R$ 140,00",
+    image: "https://m.media-amazon.com/images/I/71cM7xwJqXL._AC_SX679_.jpg",
+    link: "https://www.amazon.com.br/dp/B09CB7MJMX?ref=cm_sw_r_cso_cp_mwn_dp_PB6ZVW9NP8KPM0GVYH9Q&ref_=cm_sw_r_cso_cp_mwn_dp_PB6ZVW9NP8KPM0GVYH9Q&social_share=cm_sw_r_cso_cp_mwn_dp_PB6ZVW9NP8KPM0GVYH9Q&th=1",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406140.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63047686",
+  },
+  {
+    name: "Espelho 100x50 Portal Corpo Inteiro - Preto",
+    price: "R$ 170,00",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_701981-MLA108323370998_032026-F.webp",
+    link: "https://www.mercadolivre.com.br/espelho-100x50-portal-corpo-inteiro-grande-moldura-couro-moldura-preto/p/MLB66920225?pdp_filters=item_id%3AMLB4631655325&matt_tool=38524122#origin=share&sid=share&wid=MLB4631655325&action=copy",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406170.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304AB76",
+  },
+  {
+    name: "3 Jarras de Vidro com Tampa em Aço Inox",
+    price: "R$ 90,00",
+    image: "https://m.media-amazon.com/images/I/61XdL09osnL._AC_SX679_.jpg",
+    link: "https://www.amazon.com.br/dp/B0GP8JD35Z?ref=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&ref_=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&social_share=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540590.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304813F",
+  },
+  {
+    name: "Lixeira de Aço Inox 5 Litros",
+    price: "R$ 52,00",
+    image: "https://m.media-amazon.com/images/I/41mb9zY2LHL._SX466_.jpg",
+    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
+  },
+  {
+    name: "Kit 4 Tapetes De Banheiro 40x60 - Preto",
+    price: "R$ 60,00",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_705039-MLA111053139571_042026-F.webp",
+    link: "https://www.mercadolivre.com.br/kit-4-tapetes-de-banheiro-40x60-antiderrapante-bolinha-macio-preto/p/MLB67449010",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540560.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63041B6C",
+  },
+  {
+    name: "Kit Utensilios De Cozinha Silicone 19 Peça - Preto",
+    price: "R$ 130,00",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_868975-MLA108744322238_032026-F.webp",
+    link: "https://www.mercadolivre.com.br/kit-utensilios-de-cozinha-preto-silicone-19-pecas-com-cabo-de-madeira-colheres-de-silicone-escumadeira-concha-facas-e-tabua-completo-e-pratico-e-duravel-e-resistente-shokki/p/MLB67276478",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406130.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63046608",
   },
 ];
