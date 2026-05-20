@@ -17,21 +17,37 @@ import { useState, useEffect, useRef } from "react";
 
 
 
-/* ─── Scroll reveal hook ─── */
-// function useReveal() {
-//   const ref = useRef<HTMLDivElement>(null);
-//   useEffect(() => {
-//     const el = ref.current;
-//     if (!el) return;
-//     const obs = new IntersectionObserver(
-//       ([entry]) => { if (entry.isIntersecting) { el.classList.add("visible"); obs.disconnect(); } },
-//       { threshold: 0.12 }
-//     );
-//     obs.observe(el);
-//     return () => obs.disconnect();
-//   }, []);
-//   return ref;
-// }
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+
+    if (!el) return;
+
+    // fallback mobile
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      el.classList.add("visible");
+      return;
+    }
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add("visible");
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.12 }
+    );
+
+    obs.observe(el);
+
+    return () => obs.disconnect();
+  }, []);
+
+  return ref;
+}
 
 /* ─── Main Page ─── */
 export default function Home() {
