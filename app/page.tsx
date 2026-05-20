@@ -521,6 +521,13 @@ const giftItems = [
     pixKey: "00020101021126330014br.gov.bcb.pix0111634915073245204000053039865406235.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63047E65",
   },
   {
+    name: "Lixeira de Aço Inox 5 Litros",
+    price: "R$ 52,00",
+    image: "/lixeira.png",
+    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
+  },
+  {
     name: "Micro-ondas Electrolux 23L - Preto",
     price: "R$ 640,00",
     image: "/micro.png",
@@ -549,6 +556,13 @@ const giftItems = [
     pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406650.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***630451F8",
   },
   {
+    name: "Lixeira de Aço Inox 5 Litros",
+    price: "R$ 52,00",
+    image: "/lixeira.png",
+    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
+  },
+  {
     name: "Air Fryer Philco - Preto",
     price: "R$ 300,00",
     image: "/fryer.png",
@@ -561,6 +575,13 @@ const giftItems = [
     image: "/garrafa-termica.png",
     link: "https://www.amazon.com.br/dp/B0GV4LDL88?ref=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF&ref_=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF&social_share=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF",
     pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540542.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304274E",
+  },
+  {
+    name: "Lixeira de Aço Inox 5 Litros",
+    price: "R$ 52,00",
+    image: "/lixeira.png",
+    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
   },
   {
     name: "Kit 15 Potes Tampa Hermético",
@@ -631,5 +652,12 @@ const giftItems = [
     image: "/utensilios.png",
     link: "https://www.mercadolivre.com.br/kit-utensilios-de-cozinha-preto-silicone-19-pecas-com-cabo-de-madeira-colheres-de-silicone-escumadeira-concha-facas-e-tabua-completo-e-pratico-e-duravel-e-resistente-shokki/p/MLB67276478",
     pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406130.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63046608",
+  },
+  {
+    name: "Lixeira de Aço Inox 5 Litros",
+    price: "R$ 52,00",
+    image: "/lixeira.png",
+    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
+    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
   },
 ];
