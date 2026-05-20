@@ -18,20 +18,20 @@ import { useState, useEffect, useRef } from "react";
 
 
 /* ─── Scroll reveal hook ─── */
-function useReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { el.classList.add("visible"); obs.disconnect(); } },
-      { threshold: 0.12 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return ref;
-}
+// function useReveal() {
+//   const ref = useRef<HTMLDivElement>(null);
+//   useEffect(() => {
+//     const el = ref.current;
+//     if (!el) return;
+//     const obs = new IntersectionObserver(
+//       ([entry]) => { if (entry.isIntersecting) { el.classList.add("visible"); obs.disconnect(); } },
+//       { threshold: 0.12 }
+//     );
+//     obs.observe(el);
+//     return () => obs.disconnect();
+//   }, []);
+//   return ref;
+// }
 
 /* ─── Main Page ─── */
 export default function Home() {
@@ -261,8 +261,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 function RevealSection({ children }: { children: React.ReactNode }) {
-  const ref = useReveal();
-  return <div ref={ref} className="section-reveal">{children}</div>;
+  return <div className="visible">{children}</div>;
 }
 
 /* ─── Gift Card ─── */
