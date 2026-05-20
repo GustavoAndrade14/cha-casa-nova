@@ -290,7 +290,7 @@ function GiftCard({ name, price, image, link, pixKey }: {
               <div className="w-8 h-8 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
             </div>
           )}
-          {!imageError ? (
+          {image && !imageError ? (
             <Image
               src={image}
               alt={name}
@@ -426,7 +426,6 @@ function FreeValuePixCard({ pixKey, qrCodeImage }: { pixKey: string; qrCodeImage
             alt="QR Code Pix"
             width={200}
             height={200}
-            suppressHydrationWarning
             className="mx-auto"
           />
         </div>
@@ -596,34 +595,6 @@ const giftItems = [
     image: "/jarra.png",
     link: "https://www.amazon.com.br/dp/B0GP8JD35Z?ref=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&ref_=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&social_share=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB",
     pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540590.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304813F",
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
   },
   {
     name: "Lixeira de Aço Inox 5 Litros",
