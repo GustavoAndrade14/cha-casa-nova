@@ -65,6 +65,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isPollingActive, setIsPollingActive] = useState(true);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Função para buscar produtos
@@ -73,18 +74,10 @@ export default function Home() {
       const response = await axios.get('https://cha-casa-nova-back.vercel.app/api/produtos');
 
       if (response.data.success) {
-        // Verificar se houve mudança nos produtos
-        const newProdutos = response.data.data;
-        const hasChanges = JSON.stringify(produtos) !== JSON.stringify(newProdutos);
-
-        if (hasChanges && produtos.length > 0) {
-          // Opcional: mostrar notificação sutil
-          // Você pode adicionar um toast aqui se quiser
-        }
-
-        setProdutos(newProdutos);
+        setProdutos(response.data.data);
         setError(null);
         setLastUpdate(new Date());
+        console.log('✅ Produtos atualizados:', new Date().toLocaleTimeString());
       } else {
         setError('Erro ao carregar produtos');
       }
@@ -94,25 +87,63 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [produtos]);
+  }, []);
 
-  // Configurar polling (atualização automática)
+  // Função para controlar o polling
+  const startPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    // Polling a cada 2 MINUTOS (120000 ms)
+    pollingIntervalRef.current = setInterval(() => {
+      if (!document.hidden) { // Só atualiza se a página estiver visível
+        console.log('🔄 Buscando atualizações...', new Date().toLocaleTimeString());
+        fetchProdutos();
+      } else {
+        console.log('⏸️ Polling pausado (página não visível)');
+      }
+    }, 6000); // 2 minutos
+
+    setIsPollingActive(true);
+  }, [fetchProdutos]);
+
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+      setIsPollingActive(false);
+      console.log('⏹️ Polling parado');
+    }
+  }, []);
+
+  // Configurar polling e visibilidade
   useEffect(() => {
-    // Buscar produtos imediatamente ao carregar a página
+    // Buscar produtos imediatamente
     fetchProdutos();
 
-    // Configurar polling a cada 30 segundos
-    pollingIntervalRef.current = setInterval(() => {
-      fetchProdutos();
-    }, 10000); // 10 segundos
+    // Iniciar polling
+    startPolling();
 
-    // Limpar intervalo ao desmontar o componente
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
+    // Configurar listener de visibilidade da página
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        startPolling();
+        // Buscar imediatamente ao reativar a página
+        fetchProdutos();
       }
     };
-  }, [fetchProdutos]);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchProdutos, startPolling, stopPolling]);
 
   return (
     <>
@@ -123,10 +154,13 @@ export default function Home() {
         {/* Indicador de atualização em tempo real */}
         <div className="fixed bottom-4 right-4 z-50">
           <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-2 rounded-full border border-yellow-400/30 shadow-lg">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <div className={`w-2 h-2 rounded-full ${isPollingActive ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`} />
             <span className="text-xs text-gray-300">
               Atualizado: {lastUpdate.toLocaleTimeString()}
             </span>
+            {!isPollingActive && (
+              <span className="text-xs text-yellow-400">(pausado)</span>
+            )}
           </div>
         </div>
 
