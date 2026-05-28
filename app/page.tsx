@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 
 // Interface para os produtos
@@ -64,36 +64,71 @@ export default function Home() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Buscar produtos da API
-  useEffect(() => {
-    const fetchProdutos = async () => {
-      try {
-        setLoading(true);
-        // URL do seu backend - ajuste para o endereço correto
-        const response = await axios.get('https://cha-casa-nova-back.vercel.app/api/produtos');
+  // Função para buscar produtos
+  const fetchProdutos = useCallback(async () => {
+    try {
+      const response = await axios.get('https://cha-casa-nova-back.vercel.app/api/produtos');
 
-        if (response.data.success) {
-          setProdutos(response.data.data);
-        } else {
-          setError('Erro ao carregar produtos');
+      if (response.data.success) {
+        // Verificar se houve mudança nos produtos
+        const newProdutos = response.data.data;
+        const hasChanges = JSON.stringify(produtos) !== JSON.stringify(newProdutos);
+
+        if (hasChanges && produtos.length > 0) {
+          // Opcional: mostrar notificação sutil
+          // Você pode adicionar um toast aqui se quiser
         }
-      } catch (err) {
-        console.error('Erro ao buscar produtos:', err);
-        setError('Não foi possível conectar ao servidor');
-      } finally {
-        setLoading(false);
+
+        setProdutos(newProdutos);
+        setError(null);
+        setLastUpdate(new Date());
+      } else {
+        setError('Erro ao carregar produtos');
+      }
+    } catch (err) {
+      console.error('Erro ao buscar produtos:', err);
+      setError('Não foi possível conectar ao servidor');
+    } finally {
+      setLoading(false);
+    }
+  }, [produtos]);
+
+  // Configurar polling (atualização automática)
+  useEffect(() => {
+    // Buscar produtos imediatamente ao carregar a página
+    fetchProdutos();
+
+    // Configurar polling a cada 30 segundos
+    pollingIntervalRef.current = setInterval(() => {
+      fetchProdutos();
+    }, 10000); // 10 segundos
+
+    // Limpar intervalo ao desmontar o componente
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
     };
-
-    fetchProdutos();
-  }, []);
+  }, [fetchProdutos]);
 
   return (
     <>
       <div className="noise-overlay" />
 
       <div className="min-h-screen gradient-bg text-white relative">
+
+        {/* Indicador de atualização em tempo real */}
+        <div className="fixed bottom-4 right-4 z-50">
+          <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-2 rounded-full border border-yellow-400/30 shadow-lg">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs text-gray-300">
+              Atualizado: {lastUpdate.toLocaleTimeString()}
+            </span>
+          </div>
+        </div>
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden pt-20 pb-16 text-center px-4">
