@@ -15,8 +15,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
-
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabaseClient';
+
+const OnlineTracker = dynamic(
+  () => import('@/components/OnlineTracker').then(mod => mod.OnlineTracker),
+  { ssr: false }
+);
 
 // Interface para os produtos
 interface Produto {
@@ -92,33 +97,39 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const sessionId = crypto.randomUUID();
+    // Inicialização do Supabase Presence apenas no cliente
+    const initPresence = async () => {
+      try {
+        const sessionId = crypto.randomUUID();
 
-    const channel = supabase.channel('site-visitors', {
-      config: {
-        presence: {
-          key: sessionId,
-        },
-      },
-    });
+        const channel = supabase.channel('site-visitors', {
+          config: {
+            presence: {
+              key: sessionId,
+            },
+          },
+        });
 
-    channel
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          // Registra que este visitante está online
-          await channel.track({
-            online_at: new Date().toISOString(),
-            user_agent: navigator.userAgent,
-            url: window.location.pathname,
-          });
-        }
-      });
+        await channel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.track({
+              online_at: new Date().toISOString(),
+              user_agent: navigator.userAgent,
+              url: window.location.pathname,
+            });
+          }
+        });
 
-    // Cleanup quando sair da página
-    return () => {
-      channel.untrack();
-      channel.unsubscribe();
+        return () => {
+          channel.untrack();
+          channel.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Erro ao conectar ao Supabase:', error);
+      }
     };
+
+    initPresence();
   }, []);
 
   // Função para controlar o polling
@@ -195,6 +206,8 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        <OnlineTracker />
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden pt-20 pb-16 text-center px-4">
