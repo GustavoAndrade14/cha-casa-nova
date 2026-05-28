@@ -14,8 +14,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect, useRef } from "react";
+import axios from "axios";
 
-
+// Interface para os produtos
+interface Produto {
+  id: number;
+  name: string;
+  price: string;
+  image: string;
+  link: string;
+  pix_key: string;
+  unavailable: boolean;
+  created_at?: string;
+}
 
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null);
@@ -25,7 +36,6 @@ function useReveal() {
 
     if (!el) return;
 
-    // fallback mobile
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
       el.classList.add("visible");
       return;
@@ -51,6 +61,34 @@ function useReveal() {
 
 /* ─── Main Page ─── */
 export default function Home() {
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Buscar produtos da API
+  useEffect(() => {
+    const fetchProdutos = async () => {
+      try {
+        setLoading(true);
+        // URL do seu backend - ajuste para o endereço correto
+        const response = await axios.get('http://cha-casa-nova-back.vercel.app/api/produtos');
+
+        if (response.data.success) {
+          setProdutos(response.data.data);
+        } else {
+          setError('Erro ao carregar produtos');
+        }
+      } catch (err) {
+        console.error('Erro ao buscar produtos:', err);
+        setError('Não foi possível conectar ao servidor');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProdutos();
+  }, []);
+
   return (
     <>
       <div className="noise-overlay" />
@@ -59,7 +97,6 @@ export default function Home() {
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden pt-20 pb-16 text-center px-4">
-          {/* background glow blobs */}
           <div style={{ position: "absolute", top: "-80px", left: "50%", transform: "translateX(-50%)", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(250,204,21,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
 
           <div className="relative z-10 max-w-3xl mx-auto" style={{ animation: "fadeInUp 0.9s ease forwards" }}>
@@ -79,7 +116,6 @@ export default function Home() {
 
             <div className="gold-line w-48 mx-auto mb-12" />
 
-            {/* avatars */}
             <div className="flex justify-center items-center gap-12 md:gap-20" style={{ animation: "fadeInUp 0.9s 0.35s ease both" }}>
               {[{ src: "/mesmo.png", name: "Gustavo" }, { src: "/mesma.png", name: "Mirela" }].map(p => (
                 <div key={p.name} className="flex flex-col items-center gap-3">
@@ -192,14 +228,47 @@ export default function Home() {
         <RevealSection>
           <div className="container mx-auto px-4 pb-16 max-w-6xl">
             <SectionTitle>Nossos Itens Desejados</SectionTitle>
-            {giftItems.length === 0 ? (
+
+            {/* Loading state */}
+            {loading && (
               <div className="text-center text-yellow-400 py-10">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mb-4"></div>
                 <p>Carregando itens...</p>
               </div>
-            ) : (
+            )}
+
+            {/* Error state */}
+            {error && (
+              <div className="text-center text-red-400 py-10">
+                <p>❌ {error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 transition"
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            )}
+
+            {/* Produtos list */}
+            {!loading && !error && produtos.length === 0 && (
+              <div className="text-center text-yellow-400 py-10">
+                <p>Nenhum produto encontrado.</p>
+              </div>
+            )}
+
+            {!loading && !error && produtos.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {giftItems.map((item, i) => (
-                  <GiftCard key={i} {...item} />
+                {produtos.map((item) => (
+                  <GiftCard
+                    key={item.id}
+                    name={item.name}
+                    price={item.price}
+                    image={item.image}
+                    link={item.link}
+                    pixKey={item.pix_key}
+                    unavailable={item.unavailable}
+                  />
                 ))}
               </div>
             )}
@@ -304,14 +373,12 @@ function GiftCard({ name, price, image, link, pixKey, unavailable = false }: {
           }`}
         style={{ backdropFilter: "blur(10px)" }}
       >
-        {/* badge de indisponível */}
         {unavailable && (
           <div className="absolute top-3 right-3 z-10 bg-red-600/90 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
             INDISPONÍVEL
           </div>
         )}
 
-        {/* image */}
         <div className="relative w-full h-52 bg-gray-900 flex items-center justify-center overflow-hidden">
           {imageLoading && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -341,7 +408,6 @@ function GiftCard({ name, price, image, link, pixKey, unavailable = false }: {
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.5), transparent)" }} />
         </div>
 
-        {/* body */}
         <div className="p-4 flex flex-col flex-1 gap-3">
           <div>
             <h3 className={`font-display text-sm font-semibold leading-snug mb-1 line-clamp-2 min-h-[40px] ${unavailable ? 'text-gray-500' : 'text-yellow-300'}`}>
@@ -381,7 +447,6 @@ function GiftCard({ name, price, image, link, pixKey, unavailable = false }: {
         </div>
       </div >
 
-      {/* ── Pix Dialog ── */}
       <AlertDialog open={showPixDialog} onOpenChange={setShowPixDialog}>
         <AlertDialogContent className="flex flex-col items-center gap-6 rounded-2xl border border-yellow-400/30 bg-gray-900 p-6 md:p-10">
           <AlertDialogHeader className="relative z-10 space-y-5 w-full max-w-md mx-auto text-center">
@@ -392,7 +457,6 @@ function GiftCard({ name, price, image, link, pixKey, unavailable = false }: {
             </div>
 
             <div className="space-y-3">
-              {/* item */}
               <div className="rounded-2xl border border-white/8 bg-white/3 p-4 text-left">
                 <span className="text-xs uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
                   <Gift className="w-3 h-3" /> Item escolhido
@@ -407,7 +471,6 @@ function GiftCard({ name, price, image, link, pixKey, unavailable = false }: {
                 <p className="text-white font-medium leading-snug">Após efetuar o pix, envie o comprovante para nós</p>
               </div>
 
-              {/* pix key */}
               <div className="rounded-2xl border border-white/8 bg-black/50 p-4 space-y-3 text-left">
                 <div className="flex items-center gap-2">
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80", animation: "pulse-ring 2s infinite", flexShrink: 0 }} />
@@ -458,7 +521,6 @@ function FreeValuePixCard({ pixKey, qrCodeImage }: { pixKey: string; qrCodeImage
 
   return (
     <div className="space-y-6">
-      {/* QR Code */}
       <div className="text-center">
         <div className="inline-block p-4 rounded-2xl mb-4 shadow-lg shadow-yellow-400/10">
           <Image
@@ -474,14 +536,12 @@ function FreeValuePixCard({ pixKey, qrCodeImage }: { pixKey: string; qrCodeImage
         </p>
       </div>
 
-      {/* Divider */}
       <div className="relative flex items-center gap-3">
         <div className="flex-1 border-t border-yellow-400/20" />
         <span className="text-xs text-gray-500 px-2">ou</span>
         <div className="flex-1 border-t border-yellow-400/20" />
       </div>
 
-      {/* Pix Key */}
       <div className="space-y-3">
         <p className="text-sm text-gray-300 text-center">
           Copie nossa chave PIX e faça a transferência diretamente no seu aplicativo bancário
@@ -522,190 +582,3 @@ function FreeValuePixCard({ pixKey, qrCodeImage }: { pixKey: string; qrCodeImage
     </div>
   );
 }
-
-const giftItems = [
-  {
-    name: "Liquidificador L-99 Fb Turbo Power 2,2l 550w - Preto",
-    price: "R$ 172,00",
-    image: "/liquidificador.png",
-    link: "https://www.mercadolivre.com.br/liquidificador-l99-fb-turbo-power-22l-550w-preto-mondial/up/MLBU1091958427#polycard_client=search-desktop&be_origin=backend&search_layout=grid&position=2&type=product&tracking_id=3e678582-189a-40f3-a0f8-96d155928ca5&wid=MLB1658926276&sid=search",
-    pixKey: "00020101021126330014br.gov.bcb.pix0111634915073245204000053039865406172.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63041332",
-    unavailable: false,
-  },
-  {
-    name: "Jogo Toalhas Banho E Rosto 4 Peças - Preto e Branco",
-    price: "R$ 150,00",
-    image: "/toalhas.png",
-    link: "https://produto.mercadolivre.com.br/MLB-5599269086-jogo-toalhas-banho-e-rosto-grossas-macias-100-algodo-4pcs-_JM?attributes=PATTERN_NAME%3AQXJhYmVzY28%3D%2CCOLOR_SECONDARY_COLOR%3AUHJldG8vQnJhbmNv&picker=true&matt_tool=38524122&quantity=1",
-    pixKey: "00020101021126330014br.gov.bcb.pix0111634915073245204000053039865406150.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63042F10",
-    unavailable: false,
-  },
-  {
-    name: "Ventilador de Coluna Mallory Chronos Com Controle Remoto - Preto",
-    price: "R$ 235,00",
-    image: "/ventilador.png",
-    link: "https://www.amazon.com.br/Ventilador-Mallory-Coluna-Chronos-Preto/dp/B0BTQY3GMZ/ref=sr_1_2_sspa?__mk_pt_BR=%C3%85M%C3%85%C5%BD%C3%95%C3%91&crid=3U3BN7NKJ9QER&dib=eyJ2IjoiMSJ9.89seQuyfIHCStyLgOztPIbk6xapN-FCRSUDqLUzpS8RWhsakizW5MexsParx6EwiYJO-HIBby3AQjCgsP2ixscZlxtasyXqFnyinJoCDm16_nkfHLc7O8qXYCuQsc2fVOu9TmhCdvoN-2d3McIFehQCADLKcT7fUJXHp9SQdXXq8ZHfaq_kOnKL6sUDVy5poDnyrjYSjKgz-BX868sl-4KbxFCeToT1ejGF6_q7TSTo.r5n0A9avXDfTIQBrXZNvDftuycjGesZawCgWV6P3N2s&dib_tag=se&keywords=ventilador&qid=1778780924&s=home&sprefix=ventilador%2Chome%2C230&sr=1-2-spons&ufe=app_do%3Aamzn1.fos.fcd6d665-32ba-4479-9f21-b774e276a678&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1",
-    pixKey: "00020101021126330014br.gov.bcb.pix0111634915073245204000053039865406235.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63047E65",
-    unavailable: false,
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-    unavailable: false,
-  },
-  {
-    name: "Micro-ondas Electrolux 23L - Preto",
-    price: "R$ 640,00",
-    image: "/micro.png",
-    link: "https://www.amazon.com.br/dp/B0B8LCYYX7",
-    pixKey: "00020101021126330014br.gov.bcb.pix0111634915073245204000053039865406640.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304086E",
-    unavailable: false,
-  },
-  {
-    name: "Britânia Sanduicheira e Grill Press - Preto",
-    price: "R$ 125,00",
-    image: "/sanduicheira.png",
-    link: "https://www.amazon.com.br/Brit%C3%A2nia-SANDUICHEIRA-GRILL-PRESS-BGR27I/dp/B09WWY48B7",
-    pixKey: "00020101021126330014br.gov.bcb.pix0111634915073245204000053039865406125.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63042FFA",
-    unavailable: false,
-  },
-  {
-    name: "Kit 6 Copos de Vidro Canelado 420ml Transparente",
-    price: "R$ 45,00",
-    image: "/copos.png",
-    link: "https://www.amazon.com.br/dp/B0FTT7W8HB?ref=cm_sw_r_cso_cp_mwn_dp_ZPPHNQSFN4Q32NE48VHE&ref_=cm_sw_r_cso_cp_mwn_dp_ZPPHNQSFN4Q32NE48VHE&social_share=cm_sw_r_cso_cp_mwn_dp_ZPPHNQSFN4Q32NE48VHE",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540545.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63046DB7",
-    unavailable: false,
-  },
-  {
-    name: "Jogo com 8 Panelas Antiaderentes de Revestimento Cerâmica com Tampa de Vidro Terrara - Bege",
-    price: "R$ 650,00",
-    image: "/jgo-panelas.png",
-    link: "https://www.amazon.com.br/dp/B0DLY6SLL2?ref=cm_sw_r_cso_cp_mwn_dp_RWZZFPXECP1S8N1JERFT&ref_=cm_sw_r_cso_cp_mwn_dp_RWZZFPXECP1S8N1JERFT&social_share=cm_sw_r_cso_cp_mwn_dp_RWZZFPXECP1S8N1JERFT&th=1",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406650.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***630451F8",
-    unavailable: false,
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-    unavailable: false,
-  },
-  {
-    name: "Air Fryer Philco - Preto",
-    price: "R$ 300,00",
-    image: "/fryer.png",
-    link: "https://www.amazon.com.br/dp/B0CD14V4RQ?ref=cm_sw_r_cso_cp_mwn_dp_SP2S6HE2PECQC4TZW10Z&ref_=cm_sw_r_cso_cp_mwn_dp_SP2S6HE2PECQC4TZW10Z&social_share=cm_sw_r_cso_cp_mwn_dp_SP2S6HE2PECQC4TZW10Z&th=1",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406300.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63040898",
-    unavailable: false,
-  },
-  {
-    name: "Garrafa Térmica 1L Premium - Preto",
-    price: "R$ 42,00",
-    image: "/garrafa-termica.png",
-    link: "https://www.amazon.com.br/dp/B0GV4LDL88?ref=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF&ref_=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF&social_share=cm_sw_r_cso_cp_mwn_dp_QFDB4NA85DPBN3GNFKSF",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540542.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304274E",
-    unavailable: false,
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-    unavailable: false,
-  },
-  {
-    name: "Kit 15 Potes Tampa Hermético",
-    price: "R$ 105,00",
-    image: "/potes-tampas.png",
-    link: "https://www.amazon.com.br/dp/B0GX7FVTPB?ref=cm_sw_r_cso_cp_mwn_dp_W97P5WC2A6G18QE2EKJJ&ref_=cm_sw_r_cso_cp_mwn_dp_W97P5WC2A6G18QE2EKJJ&social_share=cm_sw_r_cso_cp_mwn_dp_W97P5WC2A6G18QE2EKJJ",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406105.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304AB9C",
-    unavailable: false,
-  },
-  {
-    name: "Kit 5 Potes de Vidro Herméticos 640ml",
-    price: "R$ 53,00",
-    image: "/potes-vidro.png",
-    link: "https://www.amazon.com.br/dp/B0GXGTZF1M?ref=cm_sw_r_cso_cp_mwn_dp_01W1XHJWYMNT8382WSTD&ref_=cm_sw_r_cso_cp_mwn_dp_01W1XHJWYMNT8382WSTD&social_share=cm_sw_r_cso_cp_mwn_dp_01W1XHJWYMNT8382WSTD&th=1",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540553.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304395F",
-    unavailable: false,
-  },
-  {
-    name: "Jogo de Talheres Faqueiro Inox 24 Peças",
-    price: "R$ 120,00",
-    image: "/jogo-talheres.png",
-    link: "https://www.amazon.com.br/dp/B07WGQ64QR?ref=cm_sw_r_cso_cp_mwn_dp_KXGN2387A05C23VA7B83_1&ref_=cm_sw_r_cso_cp_mwn_dp_KXGN2387A05C23VA7B83_1&social_share=cm_sw_r_cso_cp_mwn_dp_KXGN2387A05C23VA7B83_1",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406120.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304DD47",
-    unavailable: false,
-  },
-  {
-    name: "Electrolux Ferro de Passar Roupa Seco e Vapor",
-    price: "R$ 120,00",
-    image: "/ferro.png",
-    link: "https://www.amazon.com.br/dp/B09LJYZWX7?ref=cm_sw_r_cso_cp_mwn_dp_5PWZ4DVH7AWZG3PBRH2P&ref_=cm_sw_r_cso_cp_mwn_dp_5PWZ4DVH7AWZG3PBRH2P&social_share=cm_sw_r_cso_cp_mwn_dp_5PWZ4DVH7AWZG3PBRH2P&th=1",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406120.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304DD47",
-    unavailable: false,
-  },
-  {
-    name: "Cafeteira Elétrica Electrolux inox - Preto",
-    price: "R$ 140,00",
-    image: "/cafeteira.png",
-    link: "https://www.amazon.com.br/dp/B09CB7MJMX?ref=cm_sw_r_cso_cp_mwn_dp_PB6ZVW9NP8KPM0GVYH9Q&ref_=cm_sw_r_cso_cp_mwn_dp_PB6ZVW9NP8KPM0GVYH9Q&social_share=cm_sw_r_cso_cp_mwn_dp_PB6ZVW9NP8KPM0GVYH9Q&th=1",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406140.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63047686",
-    unavailable: false,
-  },
-  {
-    name: "Espelho 100x50 Portal Corpo Inteiro - Preto",
-    price: "R$ 170,00",
-    image: "/espelho.png",
-    link: "https://www.mercadolivre.com.br/espelho-100x50-portal-corpo-inteiro-grande-moldura-couro-moldura-preto/p/MLB66920225?pdp_filters=item_id%3AMLB4631655325&matt_tool=38524122#origin=share&sid=share&wid=MLB4631655325&action=copy",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406170.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304AB76",
-    unavailable: false,
-  },
-  {
-    name: "3 Jarras de Vidro com Tampa em Aço Inox",
-    price: "R$ 90,00",
-    image: "/jarra.png",
-    link: "https://www.amazon.com.br/dp/B0GP8JD35Z?ref=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&ref_=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB&social_share=cm_sw_r_cso_cp_mwn_dp_ZA1S14A4CNDH23WMFKQB",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540590.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***6304813F",
-    unavailable: false,
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-    unavailable: true,
-  },
-  {
-    name: "Kit 4 Tapetes De Banheiro 40x60 - Preto",
-    price: "R$ 60,00",
-    image: "/tapetes.png",
-    link: "https://www.mercadolivre.com.br/kit-4-tapetes-de-banheiro-40x60-antiderrapante-bolinha-macio-preto/p/MLB67449010",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540560.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63041B6C",
-    unavailable: false,
-  },
-  {
-    name: "Kit Com 12 Utensílios De Cozinha Silicone Premium Com Cabo De Madeira - Preto",
-    price: "R$ 130,00",
-    image: "/utensilios.png",
-    link: "https://www.mercadolivre.com.br/kit-utensilios-de-cozinha-preto-silicone-19-pecas-com-cabo-de-madeira-colheres-de-silicone-escumadeira-concha-facas-e-tabua-completo-e-pratico-e-duravel-e-resistente-shokki/p/MLB67276478",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e135204000053039865406130.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63046608",
-    unavailable: false,
-  },
-  {
-    name: "Lixeira de Aço Inox 5 Litros",
-    price: "R$ 52,00",
-    image: "/lixeira.png",
-    link: "https://www.amazon.com.br/dp/B0F8R6DP31?ref=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&ref_=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP&social_share=cm_sw_r_cso_cp_mwn_dp_7JK10XBAEW3C6TRGA1VP",
-    pixKey: "00020101021126580014br.gov.bcb.pix013619114de7-276c-408a-bd7e-904260b40e13520400005303986540552.005802BR5917GUSTAVO L ANDRADE6009FORTALEZA62070503***63049C01",
-    unavailable: false,
-  },
-];

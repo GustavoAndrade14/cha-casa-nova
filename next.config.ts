@@ -12,6 +12,7 @@ const nextConfig = {
       },
     ],
   },
+  allowedDevOrigins: ['192.168.200.64'],
 };
 
 module.exports = nextConfig;
