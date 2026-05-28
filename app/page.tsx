@@ -71,7 +71,7 @@ export default function Home() {
       try {
         setLoading(true);
         // URL do seu backend - ajuste para o endereço correto
-        const response = await axios.get('http://cha-casa-nova-back.vercel.app/api/produtos');
+        const response = await axios.get('https://cha-casa-nova-back.vercel.app/api/produtos');
 
         if (response.data.success) {
           setProdutos(response.data.data);
