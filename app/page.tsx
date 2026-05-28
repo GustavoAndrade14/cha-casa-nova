@@ -16,6 +16,8 @@ import {
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 
+import { supabase } from '@/lib/supabaseClient';
+
 // Interface para os produtos
 interface Produto {
   id: number;
@@ -87,6 +89,36 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const sessionId = crypto.randomUUID();
+
+    const channel = supabase.channel('site-visitors', {
+      config: {
+        presence: {
+          key: sessionId,
+        },
+      },
+    });
+
+    channel
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Registra que este visitante está online
+          await channel.track({
+            online_at: new Date().toISOString(),
+            user_agent: navigator.userAgent,
+            url: window.location.pathname,
+          });
+        }
+      });
+
+    // Cleanup quando sair da página
+    return () => {
+      channel.untrack();
+      channel.unsubscribe();
+    };
   }, []);
 
   // Função para controlar o polling
