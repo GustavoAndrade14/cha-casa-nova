@@ -1,9 +1,35 @@
 "use client";
 
+import axios from "axios";
+import dynamic from "next/dynamic";
 import Image from "next/image";
-import { Gift, MapPin, Calendar, Heart, ShoppingBag, ExternalLink, QrCode, Copy, Check, Sparkles, CreditCard } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Copy,
+  CreditCard,
+  ExternalLink,
+  Gift,
+  Heart,
+  HouseHeart,
+  MapPin,
+  PackageCheck,
+  QrCode,
+  Search,
+  ShoppingBag,
+  Sparkles,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -13,18 +39,68 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
-import dynamic from 'next/dynamic';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from "@/lib/supabaseClient";
 
 const OnlineTracker = dynamic(
-  () => import('@/components/OnlineTracker').then(mod => mod.OnlineTracker),
-  { ssr: false }
+  () =>
+    import("@/components/OnlineTracker").then(
+      (module) => module.OnlineTracker,
+    ),
+  { ssr: false },
 );
 
-// Interface para os produtos
-interface Produto {
+const PRODUCTS_ENDPOINT =
+  process.env.NEXT_PUBLIC_PRODUCTS_API_URL ??
+  "https://cha-casa-nova-back.vercel.app/api/produtos";
+
+const POLLING_INTERVAL_MS = 2 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 15_000;
+const FREE_PIX_KEY = "634.915.073-24";
+
+const EVENT_DETAILS = {
+  date: "dia de mês de ano",
+  time: "hora — hora",
+  address: "Rua, número — complemento",
+  city: "Fortaleza — CE, CEP",
+} as const;
+
+const HERO_PEOPLE = [
+  { src: "/mesmo.png", name: "Gustavo" },
+  { src: "/mesma.png", name: "Mirela" },
+] as const;
+
+const HOW_TO_USE_STEPS = [
+  {
+    icon: Gift,
+    title: "Escolha um presente",
+    description: "Veja a lista e escolha um item que combine com você.",
+  },
+  {
+    icon: ShoppingBag,
+    title: "Compre na loja",
+    description: "Toque em Comprar para abrir o produto em uma nova aba.",
+  },
+  {
+    icon: QrCode,
+    title: "Ou contribua via Pix",
+    description: "Use a chave do item ou envie qualquer valor no Pix livre.",
+  },
+  {
+    icon: CheckCircle2,
+    title: "Avise a gente",
+    description: "Depois da compra ou do Pix, envie o comprovante para nós.",
+  },
+] as const;
+
+const GALLERY_PHOTOS = [
+  { src: "/foto8.png", alt: "Nós" },
+  { src: "/foto3.png", alt: "Pedido de namoro" },
+  { src: "/casamento.png", alt: "Pedido de casamento" },
+] as const;
+
+type ProductFilter = "all" | "available" | "unavailable";
+
+interface Product {
   id: number;
   name: string;
   price: string;
@@ -35,664 +111,1319 @@ interface Produto {
   created_at?: string;
 }
 
-function useReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-
-    if (!el) return;
-
-    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
-      el.classList.add("visible");
-      return;
-    }
-
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add("visible");
-          obs.disconnect();
-        }
-      },
-      { threshold: 0.12 }
-    );
-
-    obs.observe(el);
-
-    return () => obs.disconnect();
-  }, []);
-
-  return ref;
+interface ProductsApiResponse {
+  success: boolean;
+  data?: Product[];
+  message?: string;
 }
 
-/* ─── Main Page ─── */
+interface RefreshOptions {
+  showLoading?: boolean;
+}
+
+interface ProductsState {
+  products: Product[];
+  loading: boolean;
+  error: string | null;
+  lastUpdate: Date | null;
+  isPollingActive: boolean;
+  refresh: (options?: RefreshOptions) => Promise<void>;
+}
+
 export default function Home() {
-  const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [isPollingActive, setIsPollingActive] = useState(true);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const {
+    products,
+    loading,
+    error,
+    lastUpdate,
+    isPollingActive,
+    refresh,
+  } = useProducts();
 
-  // Função para buscar produtos
-  const fetchProdutos = useCallback(async () => {
-    try {
-      const response = await axios.get('https://cha-casa-nova-back.vercel.app/api/produtos');
-
-      if (response.data.success) {
-        setProdutos(response.data.data);
-        setError(null);
-        setLastUpdate(new Date());
-        console.log('✅ Produtos atualizados:', new Date().toLocaleTimeString());
-      } else {
-        setError('Erro ao carregar produtos');
-      }
-    } catch (err) {
-      console.error('Erro ao buscar produtos:', err);
-      setError('Não foi possível conectar ao servidor');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Inicialização do Supabase Presence apenas no cliente
-    const initPresence = async () => {
-      try {
-        const sessionId = crypto.randomUUID();
-
-        const channel = supabase.channel('site-visitors', {
-          config: {
-            presence: {
-              key: sessionId,
-            },
-          },
-        });
-
-        await channel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await channel.track({
-              online_at: new Date().toISOString(),
-              user_agent: navigator.userAgent,
-              url: window.location.pathname,
-            });
-          }
-        });
-
-        return () => {
-          channel.untrack();
-          channel.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Erro ao conectar ao Supabase:', error);
-      }
-    };
-
-    initPresence();
-  }, []);
-
-  // Função para controlar o polling
-  const startPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-
-    // Polling a cada 2 MINUTOS (120000 ms)
-    pollingIntervalRef.current = setInterval(() => {
-      if (!document.hidden) { // Só atualiza se a página estiver visível
-        console.log('🔄 Buscando atualizações...', new Date().toLocaleTimeString());
-        fetchProdutos();
-      } else {
-        console.log('⏸️ Polling pausado (página não visível)');
-      }
-    }, 6000); // 2 minutos
-
-    setIsPollingActive(true);
-  }, [fetchProdutos]);
-
-  const stopPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-      setIsPollingActive(false);
-      console.log('⏹️ Polling parado');
-    }
-  }, []);
-
-  // Configurar polling e visibilidade
-  useEffect(() => {
-    // Buscar produtos imediatamente
-    fetchProdutos();
-
-    // Iniciar polling
-    startPolling();
-
-    // Configurar listener de visibilidade da página
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        startPolling();
-        // Buscar imediatamente ao reativar a página
-        fetchProdutos();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Cleanup
-    return () => {
-      stopPolling();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchProdutos, startPolling, stopPolling]);
+  useVisitorPresence();
 
   return (
-    <>
-      <div className="noise-overlay" />
+    <main className="relative min-h-screen overflow-x-clip bg-[#090805] pb-[calc(6rem+env(safe-area-inset-bottom))] text-white selection:bg-amber-300 selection:text-black md:pb-0">
+      <BackgroundDecoration />
+      <OnlineTracker />
+      <SiteHeader />
 
-      <div className="min-h-screen gradient-bg text-white relative">
+      <div className="relative z-10">
+        <HeroSection />
+        <AboutSection />
+        <EventInformationSection />
+        <HowToUseSection />
 
-        {/* Indicador de atualização em tempo real */}
-        <div className="fixed bottom-4 right-4 z-50">
-          <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-2 rounded-full border border-yellow-400/30 shadow-lg">
-            <div className={`w-2 h-2 rounded-full ${isPollingActive ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`} />
-            <span className="text-xs text-gray-300">
-              Atualizado: {lastUpdate.toLocaleTimeString()}
-            </span>
-            {!isPollingActive && (
-              <span className="text-xs text-yellow-400">(pausado)</span>
-            )}
-          </div>
-        </div>
+        <ProductsSection
+          products={products}
+          loading={loading}
+          error={error}
+          lastUpdate={lastUpdate}
+          isPollingActive={isPollingActive}
+          onRetry={() => void refresh({ showLoading: true })}
+        />
 
-        <OnlineTracker />
-
-        {/* ── HERO ── */}
-        <section className="relative overflow-hidden pt-20 pb-16 text-center px-4">
-          <div style={{ position: "absolute", top: "-80px", left: "50%", transform: "translateX(-50%)", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(250,204,21,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
-
-          <div className="relative z-10 max-w-3xl mx-auto" style={{ animation: "fadeInUp 0.9s ease forwards" }}>
-            <p className="font-display text-yellow-400/60 tracking-[0.3em] text-sm uppercase mb-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-              Bem-vindo ao nosso
-            </p>
-
-            <h1 className="font-display shimmer-text text-6xl md:text-8xl font-bold mb-3 leading-tight">
-              Chá de Casa Nova
-            </h1>
-
-            <div className="flex justify-center items-center gap-4 text-2xl text-yellow-300 mb-10 font-display italic" style={{ animation: "fadeInUp 0.9s 0.2s ease both" }}>
-              <span>Gustavo</span>
-              <Heart className="text-yellow-400 w-6 h-6 fill-yellow-400 floating" />
-              <span>Mirela</span>
-            </div>
-
-            <div className="gold-line w-48 mx-auto mb-12" />
-
-            <div className="flex justify-center items-center gap-12 md:gap-20" style={{ animation: "fadeInUp 0.9s 0.35s ease both" }}>
-              {[{ src: "/mesmo.png", name: "Gustavo" }, { src: "/mesma.png", name: "Mirela" }].map(p => (
-                <div key={p.name} className="flex flex-col items-center gap-3">
-                  <div className="avatar-ring w-36 h-36 md:w-52 md:h-52 rounded-full overflow-hidden border-2 border-yellow-400 shadow-2xl bg-gray-900">
-                    <Image src={p.src} alt={p.name} width={800} height={800} className="w-full h-full object-cover" />
-                  </div>
-                  <span className="font-display text-yellow-400 text-lg font-semibold tracking-wide">{p.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── SOBRE ── */}
-        <RevealSection>
-          <div className="container mx-auto px-4 pb-16 max-w-3xl">
-            <div className="info-card border border-yellow-400/20 rounded-2xl p-8 md:p-10 text-center">
-              <span className="ornament block mb-2">✦ ✦ ✦</span>
-              <h2 className="font-display text-3xl text-yellow-400 mb-5">Sobre o Chá</h2>
-              <p className="text-gray-300 text-lg leading-relaxed">
-                Estamos muito felizes em anunciar que vamos morar juntos! 🏠✨
-                <br /><br />
-                Para celebrar esse novo capítulo, convidamos você para o nosso Chá de Casa Nova.
-                Sua presença e carinho já são presentes especiais — mas se quiser nos ajudar
-                a construir nosso lar, selecionamos alguns itens que serão muito bem-vindos.
-              </p>
-              <div className="gold-line w-32 mx-auto my-6" />
-              <p className="font-display italic text-yellow-400/80 text-base">
-                "Com a sabedoria se edifica a casa, e com a inteligência ela se firma."
-                <br /><span className="text-yellow-400/50 text-sm not-italic">— Provérbios 24:3</span>
-              </p>
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ── DATA & LOCAL ── */}
-        <RevealSection>
-          <div className="container mx-auto px-4 pb-16 max-w-4xl">
-            <SectionTitle>Informações Importantes</SectionTitle>
-            <div className="grid md:grid-cols-2 gap-6">
-
-              <div className="info-card border border-yellow-400/20 rounded-2xl p-7 flex items-start gap-5">
-                <div className="w-12 h-12 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="text-yellow-400 w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-display text-xl text-yellow-400 mb-2">Data e Horário</h3>
-                  <div className="space-y-1">
-                    <div className="flex items-start gap-2 text-gray-300">
-                      <span className="gold-dot" />
-                      <span>dia de mês de ano</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-gray-300">
-                      <span className="gold-dot" />
-                      <span>hora — hora</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="info-card border border-yellow-400/20 rounded-2xl p-7 flex items-start gap-5">
-                <div className="w-12 h-12 rounded-xl bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="text-yellow-400 w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-display text-xl text-yellow-400 mb-2">Local</h3>
-                  <div className="space-y-1">
-                    <div className="flex items-start gap-2 text-gray-300">
-                      <span className="gold-dot" />
-                      <span>Rua, número — complemento</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-gray-300">
-                      <span className="gold-dot" />
-                      <span>Fortaleza — CE, CEP</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ── COMO USAR ── */}
-        <RevealSection>
-          <div className="container mx-auto px-4 pb-16 max-w-4xl">
-            <div className="info-card border border-yellow-400/20 rounded-2xl p-8 md:p-10">
-              <SectionTitle>Como Usar o Site</SectionTitle>
-              <div className="grid md:grid-cols-5 gap-8">
-                {[
-                  "Navegue pelos itens abaixo. Cada um tem link direto para a loja onde está disponível para compra.",
-                  "Clique em Comprar para ir à loja. Após comprar, avise-nos para evitar presentes duplicados.",
-                  "Prefere contribuir com um valor? Clique em Pix para receber nossa chave e fazer sua doação.",
-                  "Se quiser doar um valor diferente dos itens listados, temos uma opção de Pix livre no final da página.",
-                  "Se Comprar ou doar via Pix, por favor nos avise para que possamos agradecer e atualizar a lista de presentes. Toda ajuda é muito bem-vinda!"
-                ].map((text, i) => (
-                  <div key={i} className="flex flex-col items-center text-center gap-4">
-                    <div className="step-circle w-12 h-12 rounded-full flex items-center justify-center text-black font-bold text-xl font-display">
-                      {i + 1}
-                    </div>
-                    <p className="text-gray-300 leading-relaxed text-sm">{text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ── PRESENTES ── */}
-        <RevealSection>
-          <div className="container mx-auto px-4 pb-16 max-w-6xl">
-            <SectionTitle>Nossos Itens Desejados</SectionTitle>
-
-            {/* Loading state */}
-            {loading && (
-              <div className="text-center text-yellow-400 py-10">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mb-4"></div>
-                <p>Carregando itens...</p>
-              </div>
-            )}
-
-            {/* Error state */}
-            {error && (
-              <div className="text-center text-red-400 py-10">
-                <p>❌ {error}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="mt-4 px-4 py-2 bg-yellow-400 text-black rounded-lg hover:bg-yellow-500 transition"
-                >
-                  Tentar novamente
-                </button>
-              </div>
-            )}
-
-            {/* Produtos list */}
-            {!loading && !error && produtos.length === 0 && (
-              <div className="text-center text-yellow-400 py-10">
-                <p>Nenhum produto encontrado.</p>
-              </div>
-            )}
-
-            {!loading && !error && produtos.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {produtos.map((item) => (
-                  <GiftCard
-                    key={item.id}
-                    name={item.name}
-                    price={item.price}
-                    image={item.image}
-                    link={item.link}
-                    pixKey={item.pix_key}
-                    unavailable={item.unavailable}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </RevealSection>
-
-        {/* ── PIX LIVRE ── */}
-        <RevealSection>
-          <div className="container mx-auto px-4 pb-16 max-w-3xl">
-            <div
-              className="rounded-2xl border-2 border-yellow-400/40 p-8 md:p-12 text-center"
-              style={{ background: "linear-gradient(135deg, rgba(250,204,21,0.04) 0%, rgba(250,204,21,0.09) 50%, rgba(250,204,21,0.04) 100%)", boxShadow: "0 20px 60px rgba(250,204,21,0.06)" }}
-            >
-              <div className="inline-flex items-center justify-center p-3 bg-yellow-400/15 border border-yellow-400/30 rounded-full mb-5">
-                <CreditCard className="w-8 h-8 text-yellow-400" />
-              </div>
-              <SectionTitle>Contribua com Qualquer Valor</SectionTitle>
-              <p className="text-gray-300 text-lg max-w-xl mx-auto mb-8 leading-relaxed">
-                Se preferir, você pode fazer uma contribuição de qualquer valor para nos ajudar
-                a conquistar nossos itens. Toda ajuda é bem-vinda e muito apreciada!
-              </p>
-              <div className="max-w-md mx-auto">
-                <FreeValuePixCard pixKey={pixKeyFree} qrCodeImage="/pix.jpeg" />
-              </div>
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ── FOTOS ── */}
-        <RevealSection>
-          <div className="container mx-auto px-4 pb-16 max-w-6xl">
-            <SectionTitle>Nossos Momentos Juntos</SectionTitle>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { src: "/foto8.png", alt: "Nós" },
-                { src: "/foto3.png", alt: "Pedido de namoro" },
-                { src: "/foto5.png", alt: "Natal" },
-              ].map(({ src, alt }) => (
-                <div key={src} className="photo-card relative rounded-2xl border-2 border-yellow-400/25 bg-gray-900 h-72 overflow-hidden">
-                  <Image src={src} alt={alt} fill className="object-cover" />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)" }} />
-                  <span style={{ position: "absolute", bottom: "12px", left: "16px", color: "rgba(250,204,21,0.8)", fontSize: "0.8rem", fontFamily: "Lato, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" }}>{alt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </RevealSection>
-
-        {/* ── FOOTER ── */}
-        <footer className="border-t border-yellow-400/20 py-10 text-center px-4">
-          <div className="gold-line w-24 mx-auto mb-6" />
-          <div className="flex justify-center items-center gap-2 text-yellow-400/60 mb-2">
-            <Heart className="w-4 h-4 fill-yellow-400/40" />
-            <span className="font-display italic text-sm">Gustavo & Mirela</span>
-            <Heart className="w-4 h-4 fill-yellow-400/40" />
-          </div>
-          <p className="text-gray-600 text-xs tracking-widest uppercase">
-            © 2026 Chá de Casa Nova · Todos os direitos reservados
-          </p>
-        </footer>
-
+        <FreePixSection />
+        <GallerySection />
+        <SiteFooter />
       </div>
-    </>
+
+      <MobileActionBar />
+    </main>
   );
 }
 
-/* ─── Helpers ─── */
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function BackgroundDecoration() {
   return (
-    <div className="text-center mb-10">
-      <h2 className="font-display text-3xl md:text-4xl text-yellow-400 mb-3">{children}</h2>
-      <div className="gold-line w-20 mx-auto" />
+    <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% -10%, rgba(250, 204, 21, 0.13), transparent 34%), radial-gradient(circle at 10% 45%, rgba(245, 158, 11, 0.05), transparent 28%), linear-gradient(180deg, #0d0c08 0%, #090805 46%, #070704 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-0 opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E\")",
+        }}
+      />
     </div>
   );
 }
 
-function RevealSection({ children }: { children: React.ReactNode }) {
-  return <div className="visible">{children}</div>;
-}
-
-/* ─── Gift Card ─── */
-function GiftCard({ name, price, image, link, pixKey, unavailable = false }: {
-  name: string; price: string; image: string; link: string; pixKey: string; unavailable?: boolean;
-}) {
-  const [imageError, setImageError] = useState(false);
-  const [showPixDialog, setShowPixDialog] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true)
-
-  const copyPixKey = () => {
-    navigator.clipboard.writeText(pixKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
-
+function SiteHeader() {
   return (
-    <>
-      <div
-        className={`rounded-2xl border border-yellow-400/25 overflow-hidden flex flex-col transition-all duration-300 ${unavailable
-          ? 'bg-black/30 opacity-60 grayscale-[0.3]'
-          : 'bg-black/60 card-hover'
-          }`}
-        style={{ backdropFilter: "blur(10px)" }}
-      >
-        {unavailable && (
-          <div className="absolute top-3 right-3 z-10 bg-red-600/90 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-            INDISPONÍVEL
-          </div>
-        )}
+    <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#090805]/85 backdrop-blur-xl supports-[backdrop-filter]:bg-[#090805]/70">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <a
+          href="#inicio"
+          className="flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+          aria-label="Ir para o início"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10">
+            <HouseHeart className="h-5 w-5 text-amber-300" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-white">
+              Gustavo & Mirela
+            </span>
+            <span className="block truncate text-[11px] text-zinc-500">
+              Chá de Casa Nova
+            </span>
+          </span>
+        </a>
 
-        <div className="relative w-full h-52 bg-gray-900 flex items-center justify-center overflow-hidden">
-          {imageLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
-            </div>
-          )}
-          {image && !imageError ? (
-            <Image
-              src={image}
-              alt={name}
-              fill
-              sizes="(max-width: 768px) 100vw, 33vw"
-              className={`object-contain p-5 transition-all duration-300 ${unavailable ? 'opacity-50' : ''}`}
-              onError={() => {
-                setImageError(true);
-                setImageLoading(false);
-              }}
-              onLoad={() => setImageLoading(false)}
-              unoptimized
-            />
-          ) : (
-            <div className="flex flex-col items-center text-yellow-400/50 gap-2">
-              <Gift className="w-10 h-10" />
-              <span className="text-xs">Imagem ilustrativa</span>
-            </div>
-          )}
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.5), transparent)" }} />
-        </div>
+        <nav
+          className="hidden items-center gap-1 lg:flex"
+          aria-label="Navegação principal"
+        >
+          <HeaderLink href="#sobre">Sobre</HeaderLink>
+          <HeaderLink href="#informacoes">Informações</HeaderLink>
+          <HeaderLink href="#como-funciona">Como funciona</HeaderLink>
+          <HeaderLink href="#momentos">Momentos</HeaderLink>
+        </nav>
 
-        <div className="p-4 flex flex-col flex-1 gap-3">
-          <div>
-            <h3 className={`font-display text-sm font-semibold leading-snug mb-1 line-clamp-2 min-h-[40px] ${unavailable ? 'text-gray-500' : 'text-yellow-300'}`}>
-              {name}
-            </h3>
-            <p className={`font-bold text-lg ${unavailable ? 'text-gray-500 line-through' : 'text-yellow-400'}`}>
-              {price}
-            </p>
-          </div>
-
-          <div className="flex gap-3 mt-auto">
-            <button
-              onClick={() => !unavailable && window.open(link, "_blank", "noopener,noreferrer")}
-              disabled={unavailable}
-              className={`buy-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 font-bold text-xs sm:text-sm cursor-pointer transition-all duration-300 ${unavailable
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
-                : 'bg-yellow-400 text-black hover:bg-yellow-500'
-                }`}
-            >
-              <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Comprar</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-
-            <button
-              onClick={() => !unavailable && setShowPixDialog(true)}
-              disabled={unavailable}
-              className={`pix-btn flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 font-bold text-xs sm:text-sm cursor-pointer transition-all duration-300 ${unavailable
-                ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-50'
-                : 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 hover:bg-yellow-400/30'
-                }`}
-            >
-              <QrCode className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Pix</span>
-            </button>
-          </div>
-        </div>
-      </div >
-
-      <AlertDialog open={showPixDialog} onOpenChange={setShowPixDialog}>
-        <AlertDialogContent className="flex flex-col items-center gap-6 rounded-2xl border border-yellow-400/30 bg-gray-900 p-6 md:p-10">
-          <AlertDialogHeader className="relative z-10 space-y-5 w-full max-w-md mx-auto text-center">
-            <div className="text-center">
-              <span className="ornament block mb-1">✦</span>
-              <AlertDialogTitle className="font-display text-3xl text-yellow-400">Doação via Pix</AlertDialogTitle>
-              <p className="text-gray-400 text-sm mt-1">Ajude a tornar nosso lar ainda mais especial</p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-white/8 bg-white/3 p-4 text-left">
-                <span className="text-xs uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
-                  <Gift className="w-3 h-3" /> Item escolhido
-                </span>
-                <p className="text-white font-medium leading-snug">{name}</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/8 bg-white/3 p-4 text-left">
-                <span className="text-xs uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
-                  <Gift className="w-3 h-3" /> Informação importante
-                </span>
-                <p className="text-white font-medium leading-snug">Após efetuar o pix, envie o comprovante para nós</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/8 bg-black/50 p-4 space-y-3 text-left">
-                <div className="flex items-center gap-2">
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80", animation: "pulse-ring 2s infinite", flexShrink: 0 }} />
-                  <span className="text-sm text-gray-300 font-semibold">Chave PIX</span>
-                  {copied && (
-                    <span className="ml-auto flex items-center gap-1 text-green-400 text-xs bg-green-400/10 px-2 py-1 rounded-full">
-                      <Check className="w-3 h-3" /> Copiado!
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={copyPixKey}
-                  className="w-full flex items-center justify-between gap-3 bg-black/40 hover:bg-yellow-400/8 border border-white/10 hover:border-yellow-400/40 rounded-xl p-3 transition-all duration-300 group cursor-pointer"
-                >
-                  <code className="text-yellow-400 text-sm font-mono break-all text-left flex-1">{pixKey}</code>
-                  <div className="shrink-0 p-1.5 rounded-lg bg-white/5 group-hover:bg-yellow-400/15 transition-all">
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-gray-400 group-hover:text-yellow-400 transition-colors" />}
-                  </div>
-                </button>
-                <p className="text-xs text-gray-600 text-center">👆 Toque para copiar a chave Pix</p>
-              </div>
-            </div>
-          </AlertDialogHeader>
-
-          <AlertDialogFooter className="mt-4 relative z-10 w-full max-w-md mx-auto">
-            <AlertDialogCancel className="w-full bg-red-500/8 hover:bg-red-500/15 border border-red-500/20 hover:border-red-500/35 text-gray-400 hover:text-red-300 rounded-xl h-11 font-medium transition-all duration-300 cursor-pointer">
-              Fechar
-            </AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        <a
+          href="#presentes"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 text-sm font-bold text-black shadow-[0_8px_30px_rgba(250,204,21,0.16)] transition hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#090805]"
+        >
+          <Gift className="h-4 w-4" />
+          <span>Presentes</span>
+        </a>
+      </div>
+    </header>
   );
 }
 
-/* ─── Pix livre ─── */
-const pixKeyFree = "634.915.073-24";
+function HeaderLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a
+      href={href}
+      className="rounded-lg px-3 py-2 text-sm text-zinc-400 transition hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+    >
+      {children}
+    </a>
+  );
+}
 
-/* ─── Free Value Pix Card ─── */
-function FreeValuePixCard({ pixKey, qrCodeImage }: { pixKey: string; qrCodeImage: string }) {
-  const [copied, setCopied] = useState(false);
+function HeroSection() {
+  return (
+    <section
+      id="inicio"
+      className="scroll-mt-20 px-4 pb-12 pt-10 sm:px-6 sm:pb-20 sm:pt-16 lg:px-8"
+    >
+      <div className="mx-auto max-w-5xl text-center">
+        <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/[0.08] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/80">
+          <Sparkles className="h-3.5 w-3.5" />
+          Um novo capítulo começa aqui
+        </div>
 
-  const copyPixKey = () => {
-    navigator.clipboard.writeText(pixKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
+        <h1 className="mx-auto max-w-4xl bg-gradient-to-r from-amber-100 via-yellow-300 to-amber-100 bg-clip-text text-4xl font-black leading-[1.04] tracking-[-0.045em] text-transparent sm:text-6xl lg:text-7xl">
+          Nosso Chá de Casa Nova
+        </h1>
+
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+          Estamos preparando nosso novo lar e queremos dividir esse momento
+          especial com as pessoas que fazem parte da nossa história.
+        </p>
+
+        <div className="relative mx-auto mt-8 flex max-w-sm items-end justify-center sm:mt-10">
+          <PersonAvatar person={HERO_PEOPLE[0]} position="left" />
+
+          <div className="relative z-20 -mx-3 mb-6 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-[#090805] bg-amber-300 shadow-[0_8px_32px_rgba(250,204,21,0.28)] sm:h-14 sm:w-14">
+            <Heart className="h-5 w-5 fill-black text-black sm:h-6 sm:w-6" />
+          </div>
+
+          <PersonAvatar person={HERO_PEOPLE[1]} position="right" />
+        </div>
+
+        <div className="mt-5 flex items-center justify-center gap-2 text-xl font-bold text-amber-200 sm:text-2xl">
+          <span>Gustavo</span>
+          <span className="text-amber-300/40">&</span>
+          <span>Mirela</span>
+        </div>
+
+        <div className="mx-auto mt-8 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+          <a
+            href="#presentes"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-amber-300 px-5 text-sm font-bold text-black shadow-[0_12px_36px_rgba(250,204,21,0.16)] transition hover:-translate-y-0.5 hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#090805]"
+          >
+            <Gift className="h-5 w-5" />
+            Ver lista de presentes
+          </a>
+
+          <a
+            href="#pix-livre"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-amber-300/30 hover:bg-amber-300/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+          >
+            <QrCode className="h-5 w-5 text-amber-300" />
+            Contribuir via Pix
+          </a>
+        </div>
+
+        <a
+          href="#sobre"
+          className="mx-auto mt-10 inline-flex flex-col items-center gap-1.5 rounded-xl px-3 py-2 text-xs text-zinc-500 transition hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+        >
+          Saiba mais
+          <ChevronDown className="h-4 w-4 animate-bounce" />
+        </a>
+      </div>
+    </section>
+  );
+}
+
+function PersonAvatar({
+  person,
+  position,
+}: {
+  person: (typeof HERO_PEOPLE)[number];
+  position: "left" | "right";
+}) {
+  return (
+    <div
+      className={`relative z-10 h-32 w-32 overflow-hidden rounded-full border-2 border-amber-300/70 bg-zinc-900 shadow-2xl sm:h-44 sm:w-44 ${position === "left" ? "rotate-[-3deg]" : "rotate-[3deg]"
+        }`}
+    >
+      <Image
+        src={person.src}
+        alt={person.name}
+        fill
+        sizes="(max-width: 640px) 128px, 176px"
+        priority
+        className="object-cover"
+      />
+    </div>
+  );
+}
+
+function AboutSection() {
+  return (
+    <PageSection id="sobre" className="max-w-4xl">
+      <SectionHeading
+        eyebrow="Nossa história"
+        title="Sobre o nosso chá"
+        description="Mais do que uma lista de presentes, este site é um convite para celebrar conosco."
+      />
+
+      <div className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-5 shadow-2xl shadow-black/20 backdrop-blur-sm sm:p-8 lg:p-10">
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.78fr] lg:items-center">
+          <div>
+            <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10">
+              <HouseHeart className="h-5 w-5 text-amber-300" />
+            </div>
+
+            <p className="text-base leading-7 text-zinc-300 sm:text-lg sm:leading-8">
+              Estamos muito felizes em anunciar que vamos morar juntos! Para
+              celebrar esse novo capítulo, convidamos você para o nosso Chá de
+              Casa Nova. Sua presença e carinho já são presentes especiais,
+              mas selecionamos alguns itens para quem desejar nos ajudar a
+              construir o nosso lar.
+            </p>
+          </div>
+
+          <blockquote className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.055] p-5 sm:p-6">
+            <Sparkles className="mb-4 h-5 w-5 text-amber-300" />
+            <p className="text-lg font-medium italic leading-relaxed text-amber-100/90">
+              “Com a sabedoria se edifica a casa, e com a inteligência ela se
+              firma.”
+            </p>
+            <cite className="mt-4 block text-sm not-italic text-amber-300/60">
+              Provérbios 24:3
+            </cite>
+          </blockquote>
+        </div>
+      </div>
+    </PageSection>
+  );
+}
+
+function EventInformationSection() {
+  return (
+    <PageSection id="informacoes" className="max-w-5xl">
+      <SectionHeading
+        eyebrow="Anote na agenda"
+        title="Informações importantes"
+        description="Tudo o que você precisa saber para compartilhar esse momento com a gente."
+      />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <InformationCard
+          icon={<CalendarDays className="h-5 w-5" />}
+          title="Data e horário"
+          primary={EVENT_DETAILS.date}
+          secondary={EVENT_DETAILS.time}
+        />
+        <InformationCard
+          icon={<MapPin className="h-5 w-5" />}
+          title="Local"
+          primary={EVENT_DETAILS.address}
+          secondary={EVENT_DETAILS.city}
+        />
+      </div>
+    </PageSection>
+  );
+}
+
+function InformationCard({
+  icon,
+  title,
+  primary,
+  secondary,
+}: {
+  icon: ReactNode;
+  title: string;
+  primary: string;
+  secondary: string;
+}) {
+  return (
+    <article className="group rounded-[1.5rem] border border-white/[0.08] bg-white/[0.035] p-5 transition hover:border-amber-300/20 hover:bg-white/[0.05] sm:p-6">
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-amber-300 transition group-hover:scale-105">
+          {icon}
+        </div>
+        <div className="min-w-0 pt-0.5">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-amber-300/70">
+            {title}
+          </h3>
+          <p className="mt-2 break-words text-base font-semibold text-white sm:text-lg">
+            {primary}
+          </p>
+          <p className="mt-1 break-words text-sm leading-relaxed text-zinc-400">
+            {secondary}
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function HowToUseSection() {
+  return (
+    <PageSection id="como-funciona" className="max-w-6xl">
+      <SectionHeading
+        eyebrow="É simples"
+        title="Como funciona"
+        description="Em poucos passos você escolhe a melhor forma de participar."
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {HOW_TO_USE_STEPS.map((step, index) => {
+          const Icon = step.icon;
+
+          return (
+            <article
+              key={step.title}
+              className="relative overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6"
+            >
+              <span className="absolute right-4 top-3 text-5xl font-black text-white/[0.035]">
+                {index + 1}
+              </span>
+
+              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-300 text-black">
+                <Icon className="h-5 w-5" />
+              </div>
+
+              <h3 className="text-base font-bold text-white">{step.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                {step.description}
+              </p>
+            </article>
+          );
+        })}
+      </div>
+    </PageSection>
+  );
+}
+
+function ProductsSection({
+  products,
+  loading,
+  error,
+  lastUpdate,
+  isPollingActive,
+  onRetry,
+}: {
+  products: Product[];
+  loading: boolean;
+  error: string | null;
+  lastUpdate: Date | null;
+  isPollingActive: boolean;
+  onRetry: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<ProductFilter>("all");
+
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
+
+    return products.filter((product) => {
+      const matchesSearch =
+        normalizedQuery.length === 0 ||
+        product.name.toLocaleLowerCase("pt-BR").includes(normalizedQuery);
+
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "available" && !product.unavailable) ||
+        (filter === "unavailable" && product.unavailable);
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [filter, products, query]);
+
+  const availableCount = products.filter(
+    (product) => !product.unavailable,
+  ).length;
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="inline-block p-4 rounded-2xl mb-4 shadow-lg shadow-yellow-400/10">
-          <Image
-            src={qrCodeImage}
-            alt="QR Code Pix"
-            width={200}
-            height={200}
-            className="mx-auto"
+    <PageSection id="presentes" className="max-w-7xl">
+      <SectionHeading
+        eyebrow="Lista de presentes"
+        title="Escolha algo para o nosso lar"
+        description="Você pode comprar pela loja ou contribuir via Pix com o valor do item."
+      />
+
+      <div className="mb-5 rounded-[1.5rem] border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <label className="relative block flex-1 lg:max-w-md">
+            <span className="sr-only">Buscar presente</span>
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar presente..."
+              className="h-12 w-full rounded-xl border border-white/[0.08] bg-black/25 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-amber-300/40 focus:ring-4 focus:ring-amber-300/[0.08]"
+            />
+          </label>
+
+          <div
+            className="grid grid-cols-3 gap-2"
+            role="group"
+            aria-label="Filtrar presentes"
+          >
+            <FilterButton
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+            >
+              Todos
+            </FilterButton>
+            <FilterButton
+              active={filter === "available"}
+              onClick={() => setFilter("available")}
+            >
+              Disponíveis
+            </FilterButton>
+            <FilterButton
+              active={filter === "unavailable"}
+              onClick={() => setFilter("unavailable")}
+            >
+              Escolhidos
+            </FilterButton>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-zinc-500">
+          <span>
+            {availableCount} {availableCount === 1 ? "item disponível" : "itens disponíveis"}
+          </span>
+          <SyncStatus
+            isPollingActive={isPollingActive}
+            lastUpdate={lastUpdate}
           />
         </div>
-        <p className="text-sm text-gray-400">
-          Escaneie o QR Code pelo seu banco ou aplicativo de pagamento
-        </p>
       </div>
 
-      <div className="relative flex items-center gap-3">
-        <div className="flex-1 border-t border-yellow-400/20" />
-        <span className="text-xs text-gray-500 px-2">ou</span>
-        <div className="flex-1 border-t border-yellow-400/20" />
+      {loading && <ProductsSkeleton />}
+
+      {!loading && error && (
+        <div
+          className="rounded-[1.5rem] border border-red-400/15 bg-red-400/[0.055] px-5 py-10 text-center"
+          role="alert"
+        >
+          <p className="font-semibold text-red-200">
+            Não foi possível carregar os presentes.
+          </p>
+          <p className="mt-2 text-sm text-red-200/60">{error}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-5 min-h-11 rounded-xl bg-white px-5 text-sm font-bold text-black transition hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && products.length === 0 && (
+        <EmptyProductsState
+          title="A lista ainda está vazia"
+          description="Os presentes aparecerão aqui assim que forem cadastrados."
+        />
+      )}
+
+      {!loading && !error && products.length > 0 && filteredProducts.length === 0 && (
+        <EmptyProductsState
+          title="Nenhum presente encontrado"
+          description="Tente buscar por outro nome ou mudar o filtro selecionado."
+        />
+      )}
+
+      {!loading && !error && filteredProducts.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+          {filteredProducts.map((product) => (
+            <GiftCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
+    </PageSection>
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`min-h-11 rounded-xl px-2.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 sm:px-4 sm:text-sm ${active
+        ? "bg-amber-300 text-black"
+        : "border border-white/[0.08] bg-white/[0.035] text-zinc-400 hover:bg-white/[0.07] hover:text-white"
+        }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SyncStatus({
+  isPollingActive,
+  lastUpdate,
+}: {
+  isPollingActive: boolean;
+  lastUpdate: Date | null;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5" aria-live="polite">
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${isPollingActive ? "bg-emerald-400" : "bg-zinc-600"
+          }`}
+        aria-hidden="true"
+      />
+      Atualizado {formatUpdateTime(lastUpdate)}
+    </span>
+  );
+}
+
+function ProductsSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3"
+      role="status"
+      aria-label="Carregando presentes"
+    >
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="overflow-hidden rounded-[1.5rem] border border-white/[0.07] bg-white/[0.025]"
+        >
+          <div className="grid grid-cols-[112px_minmax(0,1fr)] sm:block">
+            <div className="aspect-square animate-pulse bg-white/[0.055] sm:aspect-[4/3]" />
+            <div className="space-y-3 p-4">
+              <div className="h-4 w-4/5 animate-pulse rounded bg-white/[0.06]" />
+              <div className="h-5 w-2/5 animate-pulse rounded bg-white/[0.06]" />
+            </div>
+            <div className="col-span-2 grid grid-cols-2 gap-2 p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="h-11 animate-pulse rounded-xl bg-white/[0.06]" />
+              <div className="h-11 animate-pulse rounded-xl bg-white/[0.06]" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyProductsState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] px-5 py-12 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.05]">
+        <Gift className="h-5 w-5 text-zinc-500" />
       </div>
+      <h3 className="mt-4 font-bold text-white">{title}</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
+        {description}
+      </p>
+    </div>
+  );
+}
 
-      <div className="space-y-3">
-        <p className="text-sm text-gray-300 text-center">
-          Copie nossa chave PIX e faça a transferência diretamente no seu aplicativo bancário
-        </p>
+function GiftCard({ product }: { product: Product }) {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(Boolean(product.image));
+  const [showPixDialog, setShowPixDialog] = useState(false);
 
-        <div className="rounded-2xl border border-white/8 bg-black/50 p-4 space-y-3" style={{ backdropFilter: "blur(12px)" }}>
-          <div className="flex items-center gap-2">
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80", flexShrink: 0 }} className="animate-pulse" />
-            <span className="text-sm text-gray-300 font-semibold">Chave PIX (CPF)</span>
-            {copied && (
-              <span className="ml-auto flex items-center gap-1 text-green-400 text-xs bg-green-400/10 px-2 py-1 rounded-full">
-                <Check className="w-3 h-3" /> Copiado!
+  useEffect(() => {
+    setImageError(false);
+    setImageLoading(Boolean(product.image));
+  }, [product.image]);
+
+  const isUnavailable = product.unavailable;
+
+  return (
+    <>
+      <article
+        className={`group overflow-hidden rounded-[1.5rem] border transition duration-300 ${isUnavailable
+          ? "border-white/[0.06] bg-white/[0.02] opacity-70"
+          : "border-white/[0.08] bg-white/[0.035] hover:-translate-y-0.5 hover:border-amber-300/20 hover:bg-white/[0.05] hover:shadow-2xl hover:shadow-black/20"
+          }`}
+      >
+        <div className="grid grid-cols-[112px_minmax(0,1fr)] sm:block">
+          <div className="relative aspect-square overflow-hidden bg-[#12110d] sm:aspect-[4/3]">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-7 w-7 animate-spin rounded-full border-2 border-amber-300/15 border-t-amber-300" />
+              </div>
+            )}
+
+            {product.image && !imageError ? (
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                sizes="(max-width: 640px) 112px, (max-width: 1280px) 50vw, 33vw"
+                className={`object-contain p-3 transition duration-500 sm:p-6 ${isUnavailable
+                  ? "grayscale-[0.35] opacity-45"
+                  : "group-hover:scale-[1.025]"
+                  }`}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoading(false);
+                }}
+                onLoad={() => setImageLoading(false)}
+                unoptimized
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-amber-300/35">
+                <Gift className="h-8 w-8" />
+                <span className="hidden text-xs sm:block">Sem imagem</span>
+              </div>
+            )}
+
+            {isUnavailable && (
+              <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/70 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-300 backdrop-blur-md sm:left-3 sm:top-3 sm:px-2.5 sm:text-[11px]">
+                <PackageCheck className="h-3 w-3" />
+                Já escolhido
               </span>
             )}
           </div>
 
-          <button
-            onClick={copyPixKey}
-            className="w-full flex items-center justify-between gap-3 bg-black/40 hover:bg-yellow-400/8 border border-white/10 hover:border-yellow-400/40 rounded-xl p-3 transition-all duration-300 group cursor-pointer"
-          >
-            <code className="flex-1 text-left text-yellow-400 text-sm break-all font-mono tracking-wide">
-              {pixKey}
-            </code>
-            <div className="shrink-0 p-1.5 rounded-lg bg-white/5 group-hover:bg-yellow-400/15 transition-all">
-              {copied ? (
-                <Check className="w-4 h-4 text-green-400" />
-              ) : (
-                <Copy className="w-4 h-4 text-gray-400 group-hover:text-yellow-400 transition-colors" />
-              )}
-            </div>
-          </button>
+          <div className="flex min-w-0 flex-col justify-center p-3.5 sm:min-h-28 sm:p-5">
+            <h3
+              className={`line-clamp-2 text-sm font-bold leading-snug sm:text-base ${isUnavailable ? "text-zinc-500" : "text-white"
+                }`}
+            >
+              {product.name}
+            </h3>
+            <p
+              className={`mt-2 text-lg font-black sm:text-xl ${isUnavailable
+                ? "text-zinc-600 line-through"
+                : "text-amber-300"
+                }`}
+            >
+              {product.price}
+            </p>
+            <p className="mt-1 hidden text-xs text-zinc-500 sm:block">
+              {isUnavailable
+                ? "Este item já foi escolhido por alguém."
+                : "Compre na loja ou contribua pelo Pix."}
+            </p>
+          </div>
 
-          <p className="text-xs text-gray-600 text-center">
-            Qualquer valor é bem-vindo! Agradecemos sua generosidade
+          <div className="col-span-2 grid grid-cols-2 gap-2 border-t border-white/[0.06] p-3 sm:border-t-0 sm:px-5 sm:pb-5 sm:pt-0">
+            {isUnavailable ? (
+              <button
+                type="button"
+                disabled
+                className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-white/[0.045] px-3 text-sm font-semibold text-zinc-600"
+              >
+                <Check className="h-4 w-4" />
+                Escolhido
+              </button>
+            ) : (
+              <a
+                href={product.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Comprar ${product.name} na loja`}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-300 px-3 text-sm font-bold text-black transition hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Comprar
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowPixDialog(true)}
+              disabled={isUnavailable}
+              aria-label={`Abrir Pix para ${product.name}`}
+              className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${isUnavailable
+                ? "cursor-not-allowed border-white/[0.04] bg-white/[0.02] text-zinc-700"
+                : "border-amber-300/20 bg-amber-300/[0.08] text-amber-200 hover:border-amber-300/35 hover:bg-amber-300/[0.13]"
+                }`}
+            >
+              <QrCode className="h-4 w-4" />
+              Pix
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <ProductPixDialog
+        product={product}
+        open={showPixDialog}
+        onOpenChange={setShowPixDialog}
+      />
+    </>
+  );
+}
+
+function ProductPixDialog({
+  product,
+  open,
+  onOpenChange,
+}: {
+  product: Product;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent
+        className="
+    fixed
+    left-1/2
+    top-1/2
+    w-[calc(100%-2rem)]
+    max-w-lg
+    max-h-[90dvh]
+    -translate-x-1/2
+    -translate-y-1/2
+    overflow-y-auto
+    rounded-[1.75rem]
+    border
+    border-amber-300/20
+    bg-[#11100c]
+    p-0
+    text-white
+    shadow-2xl
+  "
+      >
+        <div className="p-5 sm:p-7">
+          <AlertDialogHeader className="items-center text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-300 text-black">
+              <QrCode className="h-6 w-6" />
+            </div>
+
+            <AlertDialogTitle className="text-center text-2xl font-black tracking-tight text-white sm:text-3xl">
+              Contribuir via Pix
+            </AlertDialogTitle>
+
+            <AlertDialogDescription className="max-w-sm text-center text-sm leading-relaxed text-zinc-400">
+              Copie a chave abaixo e faça a transferência pelo aplicativo do seu
+              banco.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="mt-6 space-y-3">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4">
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Presente escolhido
+              </span>
+
+              <div className="mt-2 flex items-start justify-between gap-4">
+                <p className="font-semibold leading-snug text-white">
+                  {product.name}
+                </p>
+
+                <span className="shrink-0 font-black text-amber-300">
+                  {product.price}
+                </span>
+              </div>
+            </div>
+
+            <PixKeyBox
+              pixKey={product.pix_key}
+              label="Chave Pix"
+              hint="Toque no campo para copiar"
+            />
+
+            <div className="flex items-start gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-4 text-sm leading-relaxed text-amber-100/75">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+
+              <p>
+                Depois de realizar o Pix, envie o comprovante para nós para que
+                possamos agradecer e atualizar a lista.
+              </p>
+            </div>
+          </div>
+
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="min-h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-zinc-300 hover:bg-white/[0.08] hover:text-white">
+              Fechar
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function FreePixSection() {
+  return (
+    <PageSection id="pix-livre" className="max-w-5xl">
+      <div className="relative overflow-hidden rounded-[2rem] border border-amber-300/25 bg-gradient-to-br from-amber-300/[0.09] via-white/[0.035] to-transparent p-5 shadow-2xl shadow-black/25 sm:p-8 lg:p-10">
+        <div
+          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-300/[0.07] blur-3xl"
+          aria-hidden="true"
+        />
+
+        <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-300 text-black">
+              <CreditCard className="h-6 w-6" />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300/65">
+              Pix livre
+            </p>
+            <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl">
+              Contribua com qualquer valor
+            </h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-zinc-400">
+              Prefere ajudar de outra forma? Qualquer contribuição será muito
+              bem-vinda e fará parte da construção do nosso novo lar.
+            </p>
+          </div>
+
+          <FreeValuePixCard pixKey={FREE_PIX_KEY} qrCodeImage="/pix.jpeg" />
+        </div>
+      </div>
+    </PageSection>
+  );
+}
+
+function FreeValuePixCard({
+  pixKey,
+  qrCodeImage,
+}: {
+  pixKey: string;
+  qrCodeImage: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-white/[0.08] bg-black/25 p-4 sm:p-5">
+      <div className="grid gap-5 sm:grid-cols-[148px_minmax(0,1fr)] sm:items-center">
+        <div className="mx-auto rounded-2xl bg-white p-2 shadow-xl shadow-black/25 sm:mx-0">
+          <Image
+            src={qrCodeImage}
+            alt="QR Code do Pix livre"
+            width={148}
+            height={148}
+            sizes="148px"
+            className="h-36 w-36 rounded-xl object-contain"
+          />
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-center text-sm leading-relaxed text-zinc-400 sm:text-left">
+            Escaneie o QR Code ou copie a chave para contribuir pelo aplicativo
+            do seu banco.
           </p>
+          <div className="mt-4">
+            <PixKeyBox
+              pixKey={pixKey}
+              label="Chave Pix (CPF)"
+              hint="Qualquer valor é bem-vindo"
+            />
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+function PixKeyBox({
+  pixKey,
+  label,
+  hint,
+}: {
+  pixKey: string;
+  label: string;
+  hint: string;
+}) {
+  const { copied, copy } = useClipboardFeedback();
+
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-black/30 p-3.5">
+      <div className="mb-2.5 flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+          {label}
+        </span>
+        <span className="text-[11px] text-zinc-600">{hint}</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => void copy(pixKey)}
+        aria-label={`Copiar ${label}`}
+        className="group flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3.5 text-left transition hover:border-amber-300/30 hover:bg-amber-300/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+      >
+        <code className="min-w-0 flex-1 break-all font-mono text-sm font-semibold tracking-wide text-amber-200">
+          {pixKey}
+        </code>
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition ${copied
+            ? "bg-emerald-400/10 text-emerald-400"
+            : "bg-white/[0.05] text-zinc-400 group-hover:text-amber-300"
+            }`}
+        >
+          {copied ? (
+            <Check className="h-4 w-4" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </span>
+      </button>
+
+      <div className="mt-2.5 min-h-4 text-center text-xs" aria-live="polite">
+        {copied ? (
+          <span className="inline-flex items-center gap-1 text-emerald-400">
+            <Check className="h-3.5 w-3.5" /> Chave copiada
+          </span>
+        ) : (
+          <span className="text-zinc-600">Toque para copiar</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GallerySection() {
+  return (
+    <PageSection id="momentos" className="max-w-7xl">
+      <SectionHeading
+        eyebrow="Nossa história"
+        title="Momentos que nos trouxeram até aqui"
+        description="Algumas lembranças especiais da nossa caminhada juntos."
+      />
+
+      <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden">
+        {GALLERY_PHOTOS.map(({ src, alt }) => (
+          <figure
+            key={src}
+            className="group relative aspect-[4/5] w-[82vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-zinc-900 sm:w-[58vw] md:w-auto"
+          >
+            <Image
+              src={src}
+              alt={alt}
+              fill
+              sizes="(max-width: 640px) 82vw, (max-width: 768px) 58vw, 33vw"
+              className="object-cover transition duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent" />
+            <figcaption className="absolute inset-x-0 bottom-0 p-5">
+              <span className="inline-flex rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-amber-200 backdrop-blur-md">
+                {alt}
+              </span>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+
+      <p className="mt-3 text-center text-xs text-zinc-600 md:hidden">
+        Arraste para o lado para ver mais fotos
+      </p>
+    </PageSection>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="border-t border-white/[0.07] px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10">
+            <Heart className="h-4 w-4 fill-amber-300 text-amber-300" />
+          </div>
+          <div>
+            <p className="font-bold text-white">Gustavo & Mirela</p>
+            <p className="text-xs text-zinc-600">Nosso Chá de Casa Nova</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-zinc-600">
+          © 2026 · Feito com carinho para celebrar nosso novo lar
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+function MobileActionBar() {
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#0b0a07]/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl md:hidden"
+      aria-label="Ações rápidas"
+    >
+      <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
+        <a
+          href="#presentes"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 text-sm font-bold text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-100"
+        >
+          <Gift className="h-4 w-4" />
+          Ver presentes
+        </a>
+        <a
+          href="#pix-livre"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.055] px-4 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+        >
+          <QrCode className="h-4 w-4 text-amber-300" />
+          Pix livre
+        </a>
+      </div>
+    </nav>
+  );
+}
+
+function PageSection({
+  id,
+  className,
+  children,
+}: {
+  id: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className={`mx-auto scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20 ${className ?? ""
+        }`}
+    >
+      {children}
+    </section>
+  );
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mx-auto mb-7 max-w-2xl text-center sm:mb-10">
+      <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300/60">
+        {eyebrow}
+      </p>
+      <h2 className="mt-3 text-3xl font-black leading-tight tracking-[-0.035em] text-white sm:text-4xl">
+        {title}
+      </h2>
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-500 sm:text-base sm:leading-7">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function useProducts(): ProductsState {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [isPollingActive, setIsPollingActive] = useState(false);
+
+  const requestControllerRef = useRef<AbortController | null>(null);
+
+  const refresh = useCallback(
+    async ({ showLoading = false }: RefreshOptions = {}) => {
+      requestControllerRef.current?.abort();
+
+      const controller = new AbortController();
+      requestControllerRef.current = controller;
+
+      if (showLoading) {
+        setLoading(true);
+      }
+
+      try {
+        const response = await axios.get<ProductsApiResponse>(
+          PRODUCTS_ENDPOINT,
+          {
+            signal: controller.signal,
+            timeout: REQUEST_TIMEOUT_MS,
+          },
+        );
+
+        if (!response.data.success || !Array.isArray(response.data.data)) {
+          throw new Error(
+            response.data.message ?? "A API retornou uma resposta inválida.",
+          );
+        }
+
+        if (controller.signal.aborted) return;
+
+        setProducts(response.data.data);
+        setError(null);
+        setLastUpdate(new Date());
+      } catch (requestError) {
+        if (controller.signal.aborted || axios.isCancel(requestError)) {
+          return;
+        }
+
+        console.error("Erro ao buscar produtos:", requestError);
+        setError(getProductsRequestError(requestError));
+      } finally {
+        if (requestControllerRef.current === controller) {
+          requestControllerRef.current = null;
+          setLoading(false);
+        }
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+    const clearPolling = () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+    };
+
+    const startPolling = () => {
+      clearPolling();
+
+      if (document.hidden) {
+        setIsPollingActive(false);
+        return;
+      }
+
+      pollingInterval = setInterval(() => {
+        void refresh();
+      }, POLLING_INTERVAL_MS);
+
+      setIsPollingActive(true);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearPolling();
+        setIsPollingActive(false);
+        return;
+      }
+
+      void refresh();
+      startPolling();
+    };
+
+    void refresh({ showLoading: true });
+    startPolling();
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearPolling();
+      requestControllerRef.current?.abort();
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
+    };
+  }, [refresh]);
+
+  return {
+    products,
+    loading,
+    error,
+    lastUpdate,
+    isPollingActive,
+    refresh,
+  };
+}
+
+function useVisitorPresence() {
+  useEffect(() => {
+    const sessionId =
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const channel = supabase.channel("site-visitors", {
+      config: {
+        presence: {
+          key: sessionId,
+        },
+      },
+    });
+
+    channel.subscribe((status) => {
+      if (status !== "SUBSCRIBED") return;
+
+      void channel
+        .track({
+          online_at: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+          url: window.location.pathname,
+        })
+        .catch((presenceError) => {
+          console.error("Erro ao registrar presença:", presenceError);
+        });
+    });
+
+    return () => {
+      void channel.untrack();
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+}
+
+function useClipboardFeedback(resetAfterMs = 2_500) {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const copy = useCallback(
+    async (value: string) => {
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(value);
+        } else {
+          const textArea = document.createElement("textarea");
+          textArea.value = value;
+          textArea.style.position = "fixed";
+          textArea.style.opacity = "0";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          document.execCommand("copy");
+          textArea.remove();
+        }
+
+        setCopied(true);
+
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(() => {
+          setCopied(false);
+        }, resetAfterMs);
+      } catch (clipboardError) {
+        console.error("Não foi possível copiar a chave Pix:", clipboardError);
+      }
+    },
+    [resetAfterMs],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return { copied, copy };
+}
+
+function getProductsRequestError(error: unknown) {
+  if (axios.isAxiosError<ProductsApiResponse>(error)) {
+    if (error.code === "ECONNABORTED") {
+      return "O servidor demorou muito para responder. Tente novamente.";
+    }
+
+    return (
+      error.response?.data?.message ??
+      "Não foi possível conectar ao servidor."
+    );
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Não foi possível carregar os produtos.";
+}
+
+function formatUpdateTime(date: Date | null) {
+  if (!date) return "--:--";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
