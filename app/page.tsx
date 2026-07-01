@@ -167,8 +167,6 @@ export default function Home() {
         <GallerySection />
         <SiteFooter />
       </div>
-
-      <MobileActionBar />
     </main>
   );
 }
@@ -1124,32 +1122,6 @@ function SiteFooter() {
         </p>
       </div>
     </footer>
-  );
-}
-
-function MobileActionBar() {
-  return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#0b0a07]/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl md:hidden"
-      aria-label="Ações rápidas"
-    >
-      <div className="mx-auto grid max-w-md grid-cols-2 gap-2">
-        <a
-          href="#presentes"
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 text-sm font-bold text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-100"
-        >
-          <Gift className="h-4 w-4" />
-          Ver presentes
-        </a>
-        <a
-          href="#pix-livre"
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.055] px-4 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-        >
-          <QrCode className="h-4 w-4 text-amber-300" />
-          Pix livre
-        </a>
-      </div>
-    </nav>
   );
 }
 
